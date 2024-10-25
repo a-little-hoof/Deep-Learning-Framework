@@ -1,0 +1,10 @@
+^E:\GITHUB\DEEP-LEARNING-FRAMEWORK\AI-PROGRAM-CLASS\LEC8_CMAKE\BUILD\CMAKEFILES\7C876DD732B107E7C7645955ADAFA6B9\GENERATE.STAMP.RULE
+setlocal
+D:\cmake\bin\cmake.exe -SE:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake -BE:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/build/lec8_cmake.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

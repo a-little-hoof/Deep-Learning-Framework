@@ -1,0 +1,19 @@
+# CMake generation dependency list for this directory.
+D:/cmake/share/cmake-3.28/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake
+D:/cmake/share/cmake-3.28/Modules/CMakeDependentOption.cmake
+D:/cmake/share/cmake-3.28/Modules/CMakePackageConfigHelpers.cmake
+D:/cmake/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake
+D:/cmake/share/cmake-3.28/Modules/CheckCXXSourceCompiles.cmake
+D:/cmake/share/cmake-3.28/Modules/FindPackageHandleStandardArgs.cmake
+D:/cmake/share/cmake-3.28/Modules/FindPackageMessage.cmake
+D:/cmake/share/cmake-3.28/Modules/FindPythonInterp.cmake
+D:/cmake/share/cmake-3.28/Modules/GNUInstallDirs.cmake
+D:/cmake/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake
+D:/cmake/share/cmake-3.28/Modules/Internal/CheckFlagCommonConfig.cmake
+D:/cmake/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake
+D:/cmake/share/cmake-3.28/Modules/WriteBasicConfigVersionFile.cmake
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/pybind11/CMakeLists.txt
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/pybind11/tools/FindPythonLibsNew.cmake
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/pybind11/tools/JoinPaths.cmake
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/pybind11/tools/pybind11Common.cmake
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/pybind11/tools/pybind11Tools.cmake

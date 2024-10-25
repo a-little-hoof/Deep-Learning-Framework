@@ -1,0 +1,4 @@
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/build/CMakeFiles/example.dir
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/build/CMakeFiles/ALL_BUILD.dir
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/build/CMakeFiles/ZERO_CHECK.dir
+E:/github/Deep-Learning-Framework/ai-program-class/lec8_cmake/build/pybind11/CMakeFiles/ALL_BUILD.dir
