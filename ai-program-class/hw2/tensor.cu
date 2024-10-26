@@ -65,6 +65,11 @@ void Tensor::print(){
             printf("%f ", data[i]);
         }
         printf("\n");
+        printf("shape: ");
+        for (size_t i = 0; i < shape.size(); ++i) {
+            printf("%d ", shape[i]);
+        }
+        printf("\n");
     }
     else{
         float* data_cpu = nullptr;
@@ -73,6 +78,11 @@ void Tensor::print(){
         cudaMemcpy(data_cpu, data, size*sizeof(float), cudaMemcpyDeviceToHost);
         for (int i=0; i<get_size(); ++i){
             printf("%f ", data_cpu[i]);
+        }
+        printf("\n");
+        printf("shape: ");
+        for (size_t i = 0; i < shape.size(); ++i) {
+            printf("%d ", shape[i]);
         }
         printf("\n");
         free(data_cpu);

@@ -36,6 +36,21 @@ int main(){
     printf("dW\n");
     dX.print();
     printf("dX\n");
+
+    //test conv_forward
+    std::vector<int> shape4 = {2, 3, 2, 2};
+    std::vector<int> shape5 = {1, 3, 3, 3};
+    Tensor X1(shape4, "GPU");
+    Tensor W1(shape5, "GPU");
+    Tensor Y1(std::vector<int>{2, 1, 2, 2}, "GPU");
+    X1.fill_(1.0);
+    W1.fill_(1.0);
+    Y1.fill_(1.0);
+    Y1.print();
+    W1.print();
+    conv_forward(X1, W1, Y1);
+    Y1.print();
+    printf("Y1\n");
     
     return 0;
 }

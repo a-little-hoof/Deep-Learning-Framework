@@ -4,24 +4,15 @@
 #include "tensor.h"
 #include <cublas_v2.h>
 
-void fc_forward(const Tensor& X, const Tensor& W, Tensor& Y, const int pad_h, const int pad_w, const int stride_h, const int stride_w);
+void fc_forward(const Tensor& X, const Tensor& W, const Tensor& b,Tensor& Y);
 void fc_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& dW, Tensor& dX);
 
 //conv
-void conv_forward(const Tensor& X, const Tensor& W, const Tensor& b, Tensor& Y);
+void conv_forward(const Tensor& X, const Tensor& W, Tensor& Y);
 void conv_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& dW, Tensor& dX);
-void im2col(const float* data_im, const int channels,
-    const int height, const int width, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w,
-    const int stride_h, const int stride_w,
-    const int dilation_h, const int dilation_w,
-    float* data_col);
 __global__ void im2col_gpu_kernel(const int n, const float* data_im,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w,
-    const int stride_h, const int stride_w,
-    const int dilation_h, const int dilation_w,
-    const int height_col, const int width_col,
     float* data_col);
 
 //maxpool

@@ -48,7 +48,7 @@ void fc_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& dW,
 //conv_layer forward and backward
 // X: [N, C_in, H, W], Y: [N, C_out, H_out, W_out], W: [C_out, C_in, 3, 3], b: [C_out]
 // backward function takes partial L / partial y and outputs parital L / partial W or partial L / partial X
-void conv_forward(const Tensor& X, const Tensor& W, const Tensor& b, Tensor& Y){
+void conv_forward(const Tensor& X, const Tensor& W, Tensor& Y){
 
     int batch_size = X.shape[0];
     int C_in = X.shape[1];
@@ -66,64 +66,52 @@ void conv_forward(const Tensor& X, const Tensor& W, const Tensor& b, Tensor& Y){
 
         //transform X to X_hat: [C_in, H_out, W_out] -> [C_in * 3 * 3, H_out * W_out]
         Tensor X_hat(std::vector<int>{C_in*3*3, H_out*W_out}, "GPU");
-        im2col(X.data, C_in, height, width, 3, 3,
-            1, 1, 1, 1, 1, 1, 
+
+        //calculate the number of kernels we are going to launch,
+        //each kernel is responsible for copying a single-channel kernel_w*kernel_h pixels
+        //and formulate them into a column, or precisely, 1/3 column
+        int num_kernels = C_in * height * width;
+    
+        im2col_gpu_kernel<<<CudaGetBlocks(num_kernels), kCudaThreadsNum>>>(
+            num_kernels, X.data, 
+            height, width, 3, 3, 1, 1,
             X_hat.data);
 
         // matrix product with gemm
-        gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_N, C_out, C_in*3*3, H_out*W_out, 
+        
+        gemm_gpu(CUBLAS_OP_T, CUBLAS_OP_T, C_out, C_in*3*3, H_out*W_out, 
             1.0, W.data, X_hat.data, 0.0, Y.data + i * len);
     }
+    cudaDeviceSynchronize();
 }
 
 //function adapted from caffe
-void im2col(const float* data_im, const int channels,
-    const int height, const int width, const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w,
-    const int stride_h, const int stride_w,
-    const int dilation_h, const int dilation_w,
-    float* data_col) {
-
-    int height_col = (height + 2 * pad_h - (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
-    int width_col = (width + 2 * pad_w - (dilation_w * (kernel_w - 1) + 1)) / stride_w + 1;
-
-    //calculate the number of kernels we are going to launch,
-    //each kernel is responsible for copying a single-channel pixel.
-    int num_kernels = channels * height_col * width_col;
-  
-    im2col_gpu_kernel<<<CudaGetBlocks(num_kernels), kCudaThreadsNum>>>(
-        num_kernels, data_im, 
-        height, width, kernel_h, kernel_w, 
-        pad_h, pad_w, stride_h, stride_w, dilation_h, dilation_w, 
-        height_col, width_col, data_col);
-}
-
 __global__ void im2col_gpu_kernel(const int n, const float* data_im,
     const int height, const int width, const int kernel_h, const int kernel_w,
     const int pad_h, const int pad_w,
-    const int stride_h, const int stride_w,
-    const int dilation_h, const int dilation_w,
-    const int height_col, const int width_col,
     float* data_col) {
 
     //each index stands for a single-channel pixel in the output matrix
     CUDA_KERNEL_LOOP(index, n){
-        //transform the index to the corresponding pixel in the output matrix: [c, h, w]
-        //note that the area data_col_ptr points to is a 3D area: [c, h, w]
+        //transform the index to the corresponding pixel in the col matrix: [C_in*kernel_h*kernel_w, h_out*w_out]
+    
+        const int h_index = index / width; //we first calculate the height index
+        const int h_col = h_index % height; //because there are multiple channels, we take % to get the height index(h_col) in the current h*w area
+        const int w_col = index % width; //calculate the width index of the img
         
+        const int c_im = index / (height * width); //calculate the channel index of the img
         
-        const int h_index = index / width_col; //we first calculate the height index of which index is pointing to
-        const int h_col = h_index % height_col; //because there are multiple channels, we take % to get the height index(h_col) in the current h*w area
-        const int w_col = index % width_col; //calculate the width index of which index is pointing to
-        const int c_im = index / (height_col * width_col); //calculate the channel index of which index is pointing to
+        const int c_col = c_im * kernel_h * kernel_w; //calculate the channel index of the output matrix
         
-        const int c_col = c_im * kernel_h * kernel_w; //calculate the height index of the output matrix
-        const int h_offset = h_col * stride_h - pad_h; //calculate the offset of the height in the input matrix
-        const int w_offset = w_col * stride_w - pad_w; //calculate the offset of the width in the input matrix
+        const int h_offset = h_col - pad_h;
+        const int w_offset = w_col - pad_w; 
+        //calculate the offset of the height and width in the input matrix
+        //it should be similar to h_col and w_col, but we need to consider the padding and relocate the pointer to the correct position
+        //which is the left-top corner of the kernel
 
         //data_col_ptr points to the current pixel in the output matrix
         float* data_col_ptr = data_col;
-        data_col_ptr += (c_col * height_col + h_col) * width_col + w_col;
+        data_col_ptr += (c_col * height + h_col) * width + w_col;
 
         //data_im_ptr points to the current pixel in the input matrix
         const float* data_im_ptr = data_im;
@@ -132,12 +120,12 @@ __global__ void im2col_gpu_kernel(const int n, const float* data_im,
         //iterate over the kernel, copy the pixel value to the output matrix
         for (int i = 0; i < kernel_h; ++i) {
             for (int j = 0; j < kernel_w; ++j) {
-                int h_im = h_offset + i * dilation_h;
-                int w_im = w_offset + j * dilation_w;
+                int h_im = h_offset + i;
+                int w_im = w_offset + j;
                 *data_col_ptr =
                 (h_im >= 0 && w_im >= 0 && h_im < height && w_im < width) ?
-                data_im_ptr[i * dilation_h * width + j * dilation_w] : 0;
-                data_col_ptr += height_col * width_col;
+                data_im_ptr[i * width + j] : 0;
+                data_col_ptr += height * width; //becaues we are formulating a column, we need to move the pointer to the next pixel in the column
             }
         }
     }
@@ -212,6 +200,10 @@ void conv_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& d
 
 // m=batch_size, k=in_features, n=out_features, C行C列内积维度
 // C(m,n) = \alpha A(m,k) * B(k,n) + \beta C(m,n)
+
+//m: number of rows of matrix op(A) and rows of matrix C
+//n: number of columns of matrix op(B) and columns of matrix C
+//k: number of columns of matrix op(A) and rows of matrix op(B)
 void gemm_gpu(cublasOperation_t trans_A, cublasOperation_t trans_B, const int m, const int k, const int n, 
 const float alpha, const float *A, const float *B, const float beta, float *C)
 {
