@@ -23,19 +23,37 @@ const float alpha, const float *A, const float *B, const float beta, float *C)
 }
 
 int main(){
-    std::vector<int> s1 = {1,2,3,4,5,6};
-    std::vector<int> s2 = {7,8,9,10,11,12};
-    int *C = new int[20];
-    // Create a handle for CUBLAS
-    cublasHandle_t handle; 
-    cublasCreate(&handle);
-    // Do the actual multiplication
-    cublasSgemm(handle, trans_A, trans_B, m, n, k, &alpha, 
-    A, lda, B, ldb, &beta, C, ldc);
-    // Destroy the handle
-    cublasDestroy(handle);
+    float *A = new float[2];
+    float *B = new float[6];
+    //create two lists
+    for (int i=0; i<2; i++){
+        A[i] = i;
+        printf("%f\n", A[i]);
+    }
+    for (int i=2; i<8; i++){
+        B[i] = i;
+        printf("%f\n", B[i]);
+    }
 
-    cudaDeviceSynchronize();
+    float *C = new float[20];
+    for (int i=0; i<1; i++){
+        for (int j=0; j<3; j++){
+            printf("%f ", C[i*3+j]);
+        }
+        printf("\n");
+    }
+
+    gemm_gpu(CUBLAS_OP_T, CUBLAS_OP_T, 1, 2, 3, 1.0, A, B, 0.0, C);
+    for (int i=0; i<1; i++){
+        for (int j=0; j<3; j++){
+            printf("%f ", C[i*3+j]);
+        }
+        printf("\n");
+    }
+    for (int i=0; i<20; i++){
+        printf("%f ", C[i]);
+    }
+
 
     return 0;
 }

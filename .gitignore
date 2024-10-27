@@ -1,0 +1,66 @@
+# C++ build files
+*.o
+*.obj
+*.so
+*.a
+*.lib
+*.dll
+*.exe
+*.out
+*.class
+
+# C++ project files
+/.vscode/
+/.idea/
+/build/
+/cmake-build-debug/
+/CMakeFiles/
+CMakeCache.txt
+Makefile
+CMakeLists.txt.user
+
+# CUDA files
+*.ptx
+*.cubin
+*.fatbin
+
+# Python compiled files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.pkl
+*.pickle
+
+# Python virtual environments
+.env/
+.venv/
+ENV/
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# macOS files
+.DS_Store
+
+# Windows files
+Thumbs.db
+desktop.ini
+
+# IDE configurations
+*.idea/
+*.vscode/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+
+# Other
+*.ipynb_convert
