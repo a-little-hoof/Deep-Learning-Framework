@@ -6,13 +6,19 @@ int main(){
     std::vector<int> shape1 = {2, 3};
     std::vector<int> shape2 = {3, 4};
     std::vector<int> shape3 = {4};
-    Tensor X(shape1, "GPU");
-    Tensor W(shape2, "GPU");
+    Tensor X(shape1, "CPU");
+    Tensor W(shape2, "CPU");
     Tensor b(shape3, "GPU");
     Tensor Y(std::vector<int>{2, 4}, "GPU");
-    X.fill_(1.0);
-    W.fill_(1.0);
-    b.fill_(1.0);
+    for (int i = 0; i < 6; i++){
+        X.data[i] = i+1;
+    }
+    for (int i = 0; i < 12; i++){
+        W.data[i] = i+7;
+    }
+    X.gpu();
+    W.gpu();
+    b.fill_(1);
     X.print();
     printf("X\n");
     W.print();

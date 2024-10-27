@@ -16,13 +16,13 @@ void fc_forward(const Tensor& X, const Tensor& W, const Tensor& b, Tensor& Y){
     int out_features = W.shape[1];
 
     // matrix product with gemm
-    gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_N, batch_size, in_features, out_features, 
+    gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_N, batch_size, out_features, in_features,  
         1.0, X.data, W.data, 0.0, Y.data);
 
     // add bias
     Tensor ones_(std::vector<int>{batch_size, 1}, "GPU");
     ones_.fill_(1.0);
-    gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_N, batch_size, 1, out_features,
+    gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_N, batch_size, out_features, 1,
         1.0, ones_.data, b.data, 1.0, Y.data);
 }
 
@@ -35,11 +35,11 @@ void fc_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& dW,
     int out_features = W.shape[1];
 
     // dW = X^T * dY
-    gemm_gpu(CUBLAS_OP_T, CUBLAS_OP_N, in_features, batch_size, out_features,  
+    gemm_gpu(CUBLAS_OP_T, CUBLAS_OP_N, in_features, out_features, batch_size,   
         1.0, X.data, dY.data, 0.0, dW.data);
 
     // dX = dY * W^T
-    gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_T, batch_size, out_features, in_features,  
+    gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_T, batch_size, in_features, out_features,  
         1.0, dY.data, W.data, 0.0, dX.data);
     
 
@@ -79,7 +79,7 @@ void conv_forward(const Tensor& X, const Tensor& W, Tensor& Y){
 
         // matrix product with gemm
         
-        gemm_gpu(CUBLAS_OP_T, CUBLAS_OP_T, C_out, C_in*3*3, H_out*W_out, 
+        gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_N, C_out, H_out*W_out, C_in*3*3, 
             1.0, W.data, X_hat.data, 0.0, Y.data + i * len);
     }
     cudaDeviceSynchronize();
@@ -198,27 +198,24 @@ void conv_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& d
 
 
 
-// m=batch_size, k=in_features, n=out_features, C行C列内积维度
-// C(m,n) = \alpha A(m,k) * B(k,n) + \beta C(m,n)
-
-//m: number of rows of matrix op(A) and rows of matrix C
-//n: number of columns of matrix op(B) and columns of matrix C
-//k: number of columns of matrix op(A) and rows of matrix op(B)
-void gemm_gpu(cublasOperation_t trans_A, cublasOperation_t trans_B, const int m, const int k, const int n, 
+void gemm_gpu(cublasOperation_t trans_A, cublasOperation_t trans_B, const int m, const int n, const int k,  
 const float alpha, const float *A, const float *B, const float beta, float *C)
 {
-    int lda = m, ldb = k, ldc = m;
+    int lda = k, ldb = n, ldc = n;
     if (trans_A == CUBLAS_OP_T)
-        lda = k;
+        lda = m;
     if (trans_B == CUBLAS_OP_T)
-        ldb = n;
+        ldb = k;
+
+    // printf("m=%d, k=%d, n=%d\n", m, k, n);
+    // printf("lda=%d, ldb=%d, ldc=%d\n", lda, ldb, ldc);
 
     // Create a handle for CUBLAS
     cublasHandle_t handle; 
     cublasCreate(&handle);
     // Do the actual multiplication
-    cublasSgemm(handle, trans_A, trans_B, m, n, k, &alpha, 
-    A, lda, B, ldb, &beta, C, ldc);
+    cublasSgemm(handle, trans_B, trans_A, n, m, k, &alpha, 
+    B, ldb, A, lda, &beta, C, ldc);
     // Destroy the handle
     cublasDestroy(handle);
 
