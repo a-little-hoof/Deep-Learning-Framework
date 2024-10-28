@@ -32,6 +32,7 @@ void Tensor::cpu(){
         int size = get_size();
         data_cpu = (float*)malloc(size*sizeof(float));
         cudaMemcpy(data_cpu, data, size*sizeof(float), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
         cudaFree(data);
         data = data_cpu;
         device = "CPU";
@@ -44,6 +45,7 @@ void Tensor::gpu(){
         int size = get_size();
         cudaMalloc(&data_gpu, size*sizeof(float));
         cudaMemcpy(data_gpu, data, size*sizeof(float), cudaMemcpyHostToDevice);
+        cudaDeviceSynchronize();
         free(data);
         data = data_gpu;
         // cudaMemcpy(data, data_gpu, size*sizeof(float), cudaMemcpyDeviceToHost);
@@ -76,6 +78,7 @@ void Tensor::print(){
         int size = get_size();
         data_cpu = (float*)malloc(size*sizeof(float));
         cudaMemcpy(data_cpu, data, size*sizeof(float), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
         for (int i=0; i<get_size(); ++i){
             printf("%f ", data_cpu[i]);
         }
@@ -103,6 +106,7 @@ void Tensor::fill_(float value){
             data_cpu[i] = value;
         }
         cudaMemcpy(data, data_cpu, size*sizeof(float), cudaMemcpyHostToDevice);
+        cudaDeviceSynchronize();
         free(data_cpu);
     }
 }

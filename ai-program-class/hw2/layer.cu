@@ -76,6 +76,7 @@ void conv_forward(const Tensor& X, const Tensor& W, Tensor& Y){
             num_kernels, X.data, 
             height, width, 3, 3, 1, 1,
             X_hat.data);
+        cudaDeviceSynchronize();
 
         // matrix product with gemm
         
@@ -150,6 +151,7 @@ void conv_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& d
     im2col_gpu_kernel<<<CudaGetBlocks(num_kernels), kCudaThreadsNum>>>(
             num_kernels, X.data, height, width, 3, 3, 1, 1,
             X_hat.data);
+    cudaDeviceSynchronize();
 
     gemm_gpu(CUBLAS_OP_N, CUBLAS_OP_T, C_out, C_in*3*3, height*width,  
         1.0, dY.data, X_hat.data, 0.0, dW.data);

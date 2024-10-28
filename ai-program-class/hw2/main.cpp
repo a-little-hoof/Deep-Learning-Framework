@@ -3,6 +3,7 @@
 
 int main(){
     //test fc_forward
+    printf("testing fc_forward...\n\n");
     std::vector<int> shape1 = {2, 3};
     std::vector<int> shape2 = {3, 4};
     std::vector<int> shape3 = {4};
@@ -20,16 +21,18 @@ int main(){
     W.gpu();
     b.fill_(1);
     X.print();
-    printf("X\n");
+    printf("X\n\n");
     W.print();
-    printf("W\n");
+    printf("W\n\n");
     b.print();
-    printf("b\n");
+    printf("b\n\n");
     fc_forward(X, W, b, Y);
     Y.print();
     printf("Y\n");
+    printf("\n\n");
 
     //test fc_backward
+    printf("testing fc_backward...\n\n");
     Tensor dY(std::vector<int>{2, 4}, "GPU");
     Tensor dW(shape2, "GPU");
     Tensor db(shape3, "GPU");
@@ -39,11 +42,13 @@ int main(){
     dX.fill_(0.0);
     fc_backward(dY, X, W, dW, dX);
     dW.print();
-    printf("dW\n");
+    printf("dW\n\n");
     dX.print();
-    printf("dX\n");
+    printf("dX\n\n");
+    printf("\n\n");
 
     //test conv_forward
+    printf("testing conv_forward...\n\n");
     std::vector<int> shape4 = {2, 3, 2, 2};
     std::vector<int> shape5 = {1, 3, 3, 3};
     Tensor X1(shape4, "GPU");
@@ -53,10 +58,28 @@ int main(){
     W1.fill_(1.0);
     Y1.fill_(1.0);
     Y1.print();
+    printf("Y1\n\n");
     W1.print();
+    printf("W1\n\n");
     conv_forward(X1, W1, Y1);
     Y1.print();
     printf("Y1\n");
+    printf("\n\n");
+
+    //test conv_backward
+    printf("testing conv_backward...\n\n");
+    Tensor dY2(std::vector<int>{2, 1, 2, 2}, "GPU");
+    Tensor dW2(shape5, "GPU");
+    Tensor dX2(shape4, "GPU");
+    dY2.fill_(1.0);
+    dW2.fill_(0.0);
+    dX2.fill_(0.0);
+    conv_backward(dY2, X1, W1, dW2, dX2);
+    dW2.print();
+    printf("dW2\n\n");
+    dX2.print();
+    printf("dX2\n");
+
     
     return 0;
 }
