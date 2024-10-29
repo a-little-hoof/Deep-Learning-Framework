@@ -197,7 +197,9 @@ __global__ void col2im_gpu_kernel(const int n, const float* data_col,
             for (int w_col = w_col_start; w_col < w_col_end; w_col += 1) {
                 int h_k = (h_im - h_col);
                 int w_k = (w_im - w_col);
-                int data_col_index = (((c_im * kernel_h + h_k) * kernel_w + w_k) * height + h_col) * width + w_col;
+                // postition in the kernel
+                int position_in_the_kernel = h_k * kernel_w + w_k;
+                int data_col_index = c_im*kernel_h*kernel_w*height*width + (position_in_the_kernel * height + h_col) * width + w_col;
                 val += data_col[data_col_index];
             }
         }
