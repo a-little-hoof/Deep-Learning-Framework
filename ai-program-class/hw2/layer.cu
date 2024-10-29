@@ -160,45 +160,51 @@ void conv_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& d
     // dX_hat: [C_in * 3 * 3, H_out * W_out], W: [C_out, C_in, 3, 3], dY: [C_out, H_out, W_out]
     // here we iterate over batch, each image in the batch is used to calculate a gradient of the input image in X_hat
     Tensor dX_hat(std::vector<int>{batch_size, C_in*3*3, height*width}, "GPU");
-    int len = C_in * 3 * 3 * height * width;
     for (int i = 0; i < batch_size; i++){
         gemm_gpu(CUBLAS_OP_T, CUBLAS_OP_N, C_in*3*3, height*width, C_out,  
-            1.0, W.data, dY.data + i * C_out * height * width, 0.0, dX_hat.data + i * len);
-    }
+            1.0, W.data, dY.data + i * C_out * height * width, 0.0, dX_hat.data + i * C_in * 3 * 3 * height * width);
 
-    // // dX_hat: [N, C_in * 3 * 3, H_out * W_out] -> dX: [N, C_in, H, W]
-    // col2im_gpu_kernel<<<CudaGetBlocks(num_kernels), kCudaThreadsNum>>>(
-    //     num_kernels, dX_hat.data, height, width, channels, 3, 3, 1, 1, dX.data);
+        // dX_hat: [C_in * 3 * 3, H_out * W_out] -> dX: [C_in, H, W]
+        col2im_gpu_kernel<<<CudaGetBlocks(num_kernels), kCudaThreadsNum>>>(
+            num_kernels, dX_hat.data + i * C_in * 3 * 3 * height * width, height, width, C_in, 3, 3, 1, 1, dX.data + i * C_in * height * width);
+        cudaDeviceSynchronize();
+    }
     
 }
 
-// //code adapted from caffe
-// __global__ void col2im_gpu_kernel(const int n, const float* data_col,
-//     const int height, const int width, const int channels,
-//     const int kernel_h, const int kernel_w, const int pad_h, const int pad_w,
-//     float* data_im) {
-//     CUDA_KERNEL_LOOP(index, n) {
-//         float val = 0;
-//         const int w_im = index % width + pad_w;
-//         const int h_im = (index / width) % height + pad_h;
-//         const int c_im = index / (width * height);
-//         // compute the start and end of the output
-//         const int w_col_start = (w_im < kernel_w) ? 0 : (w_im - kernel_w) + 1;
-//         const int w_col_end = min(w_im / stride_w + 1, width_col);
-//         const int h_col_start =(h_im < kernel_h) ? 0 : (h_im - kernel_h) + 1;
-//         const int h_col_end = min(h_im + 1, height_col);
+//code adapted from caffe
+__global__ void col2im_gpu_kernel(const int n, const float* data_col,
+    const int height, const int width, const int channels,
+    const int kernel_h, const int kernel_w, const int pad_h, const int pad_w,
+    float* data_im) {
+    //each index stands for a single-channel pixel in the input img
+    CUDA_KERNEL_LOOP(index, n) {
+        float val = 0;
+        
+        // map the index to the corresponding pixel in the input img
+        // include padding!!!
+        const int w_im = index % width + pad_w;
+        const int h_im = (index / width) % height + pad_h;
+        const int c_im = index / (width * height);
 
-//         for (int h_col = h_col_start; h_col < h_col_end; h_col += 1) {
-//             for (int w_col = w_col_start; w_col < w_col_end; w_col += 1) {
-//                 int h_k = (h_im - h_col);
-//                 int w_k = (w_im - w_col);
-//                 int data_col_index = (((c_im * kernel_h + h_k) * kernel_w + w_k) * height_col + h_col) * width_col + w_col;
-//                 val += data_col[data_col_index];
-//             }
-//         }
-//         data_im[index] = val;
-//     }
-// }
+        // compute the start and end of X_hat
+        // this part does not include padding
+        const int w_col_start = (w_im < kernel_w) ? 0 : (w_im - kernel_w) + 1;
+        const int w_col_end = min(w_im + 1, width);
+        const int h_col_start =(h_im < kernel_h) ? 0 : (h_im - kernel_h) + 1;
+        const int h_col_end = min(h_im + 1, height);
+        for (int h_col = h_col_start; h_col < h_col_end; h_col += 1) {
+            for (int w_col = w_col_start; w_col < w_col_end; w_col += 1) {
+                int h_k = (h_im - h_col);
+                int w_k = (w_im - w_col);
+                int data_col_index = (((c_im * kernel_h + h_k) * kernel_w + w_k) * height + h_col) * width + w_col;
+                val += data_col[data_col_index];
+            }
+        }
+
+        data_im[index] = val;
+    }
+}
 
 
 

@@ -68,17 +68,17 @@ int main(){
 
     //test conv_backward
     printf("testing conv_backward...\n\n");
-    Tensor dY2(std::vector<int>{2, 1, 2, 2}, "GPU");
-    Tensor dW2(shape5, "GPU");
-    Tensor dX2(shape4, "GPU");
-    dY2.fill_(1.0);
-    dW2.fill_(0.0);
-    dX2.fill_(0.0);
-    conv_backward(dY2, X1, W1, dW2, dX2);
-    dW2.print();
-    printf("dW2\n\n");
-    dX2.print();
-    printf("dX2\n");
+    Tensor dY1(std::vector<int>{2, 1, 2, 2}, "GPU");
+    Tensor dW1(shape5, "GPU");
+    Tensor dX1(shape4, "GPU");
+    dY1.fill_(1.0);
+    dW1.fill_(0.0);
+    dX1.fill_(0.0);
+    conv_backward(dY1, X1, W1, dW1, dX1);
+    dW1.print();
+    printf("dW1\n\n");
+    dX1.print();
+    printf("dX1\n");
 
     
     return 0;
