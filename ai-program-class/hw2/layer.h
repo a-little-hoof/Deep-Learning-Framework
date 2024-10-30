@@ -22,6 +22,14 @@ __global__ void col2im_gpu_kernel(const int n, const float* data_col,
 //maxpool
 void maxpool_forward(const Tensor& X, Tensor& Y, Tensor& mask);
 void maxpool_backward(const Tensor& dY, const Tensor& mask, Tensor& dX);
+__global__ void max_pool_forward_kernel(int nthreads, float* in_data,
+    int channels, int in_h, int in_w, int out_h, int out_w, 
+    int kernel_h, int kernel_w, int pad_h, int pad_w, int stride_h, int stride_w,
+    float* out_data, float* out_mask);
+__global__ void max_pool_backward_kernel(int nthreads, float* in_data,
+    float* mask, int channels, int in_h, int in_w, int out_h, int out_w, 
+    int kernel_h, int kernel_w, int pad_h, int pad_w, int stride_h, int stride_w,
+    float* out_data);
 
 //softmax
 void softmax_forward(const Tensor& X, Tensor& Y);

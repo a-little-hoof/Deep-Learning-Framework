@@ -79,6 +79,39 @@ int main(){
     printf("dW1\n\n");
     dX1.print();
     printf("dX1\n");
+    printf("\n\n");
+
+    //test maxpool_forward
+    printf("testing maxpool_forward...\n\n");
+    std::vector<int> shape6 = {1, 3, 4, 4};
+    Tensor X2(shape6, "CPU");
+    Tensor Y2(std::vector<int>{1, 3, 2, 2}, "GPU");
+    Tensor mask(std::vector<int>{1, 3, 2, 2}, "GPU");
+    for (int i = 0; i < 48; i++){
+        X2.data[i] = i+1;
+    }
+    X2.gpu();
+    X2.print();
+    printf("X2\n\n");
+    Y2.fill_(1.0);
+    mask.fill_(-1.0);
+    maxpool_forward(X2, Y2, mask);
+    mask.print();
+    printf("mask\n\n");
+    Y2.print();
+    printf("Y2\n");
+    printf("\n\n");
+
+    //test maxpool_backward
+    printf("testing maxpool_backward...\n\n");
+    Tensor dY2(std::vector<int>{1, 3, 2, 2}, "GPU");
+    Tensor dX2(shape6, "GPU");
+    dY2.fill_(1.0);
+    dX2.fill_(0.0);
+    maxpool_backward(dY2, mask, dX2);
+    dX2.print();
+    printf("dX2\n");
+
 
     
     return 0;

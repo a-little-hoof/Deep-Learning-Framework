@@ -5,6 +5,7 @@
 #include <tensor.h>
 #include <layer.h>
 #include <utils.h>
+#include <float.h>
 
 // fc layer forward and backward
 // X: [N, C_in], Y: [N, C_out], W: [C_in, C_out], b: [C_out]
@@ -232,4 +233,124 @@ const float alpha, const float *A, const float *B, const float beta, float *C)
     cublasDestroy(handle);
 
     cudaDeviceSynchronize();
+}
+
+//maxpool
+// X: [N, C, H, W], Y: [N, C, H//2, W//2], mask: [N, C, H//2, W//2]
+void maxpool_forward(const Tensor& X, Tensor& Y, Tensor& mask){
+    int batch_size = X.shape[0];
+    int channels = X.shape[1];
+    int in_h = X.shape[2];
+    int in_w = X.shape[3];
+    int out_h = Y.shape[2];
+    int out_w = Y.shape[3];
+    int kernel_h = 2;
+    int kernel_w = 2;
+    int stride_h = 2;
+    int stride_w = 2;
+    int pad_h = 0;
+    int pad_w = 0;
+    int len = batch_size * channels * out_h * out_w;
+
+    max_pool_forward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(
+        len, X.data, channels, in_h, in_w, out_h, out_w, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, Y.data, mask.data);
+    cudaDeviceSynchronize();
+}
+
+// each thread is responsible for a local window
+__global__ void max_pool_forward_kernel(int nthreads, float* in_data,
+    int channels, int in_h, int in_w, int out_h, int out_w, 
+    int kernel_h, int kernel_w, int pad_h, int pad_w, int stride_h, int stride_w,
+    float* out_data, float* out_mask) {
+
+    CUDA_KERNEL_LOOP(index, nthreads) {
+        int n = index / out_w / out_h / channels; //batch index
+        int c = (index / out_w / out_h) % channels; //channel index
+        int ph = (index / out_w) % out_h; //height index
+        int pw = index % out_w; //width index
+        // implement max pooling for each local window,
+        // store the max value and mask to out_data[index] & out_mask[index]
+
+        //here we doesn't count the padding
+        //which means [hstart, hend) & [wstart, wend) is all in the area of the input img
+        int hstart = ph * stride_h - pad_h;
+        int wstart = pw * stride_w - pad_w;
+        int hend = min(hstart + kernel_h, in_h);
+        int wend = min(wstart + kernel_w, in_w);
+        hstart = max(hstart, 0);
+        wstart = max(wstart, 0);
+
+        float maxval = -FLT_MAX;
+        int maxidx = -1;
+        const float* in_index = in_data + (n * channels + c) * in_h * in_w;
+        
+        for (int h = hstart; h < hend; ++h) {
+            for (int w = wstart; w < wend; ++w) {
+                if (in_index[h * in_w + w] > maxval) {
+                    maxidx = h * in_w + w;
+                    maxval = in_index[maxidx];
+                }
+            }
+        }
+
+        out_data[index] = maxval;
+        out_mask[index] = maxidx;
+        
+        
+    }
+}
+
+// dY: [N, C, H//2, W//2], mask: [N, C, H//2, W//2], dX: [N, C, H, W]
+void maxpool_backward(const Tensor& dY, const Tensor& mask, Tensor& dX){
+    int batch_size = dY.shape[0];
+    int channels = dY.shape[1];
+    int out_h = dX.shape[2];
+    int out_w = dX.shape[3];
+    int in_h = dY.shape[2];
+    int in_w = dY.shape[3];
+    int kernel_h = 2;
+    int kernel_w = 2;
+    int stride_h = 2;
+    int stride_w = 2;
+    int pad_h = 0;
+    int pad_w = 0;
+    int len = batch_size * channels * out_h * out_w;
+
+    max_pool_backward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(
+        len, dY.data, mask.data, channels, in_h, in_w, out_h, out_w, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dX.data);
+    cudaDeviceSynchronize();
+}
+
+__global__ void max_pool_backward_kernel(int nthreads, float* in_data,
+    float* mask, int channels, int in_h, int in_w, int out_h, int out_w, 
+    int kernel_h, int kernel_w, int pad_h, int pad_w, int stride_h, int stride_w,
+    float* out_data) {
+
+    CUDA_KERNEL_LOOP(index, nthreads) {
+        int n = index / out_w / out_h / channels; //batch index
+        int c = (index / out_w / out_h) % channels; //channel index
+        int h = (index / out_w) % out_h; //height index
+        int w = index % out_w; //width index
+
+
+        int hstart = (h + pad_h < kernel_h) ? 0 : (h - kernel_h + pad_h) / stride_h + 1;
+        int wstart = (w + pad_w < kernel_w) ? 0 : (w - kernel_w + pad_w) / stride_w + 1;
+
+        // plus one is because there is a less than sign in the follow up for loop
+        int hend = min((h + pad_h) / stride_h + 1, in_h);
+        int wend = min((w + pad_w) / stride_w + 1, in_w);
+
+        float gradient = 0;
+        //index of the max value in the mask
+        const float* mask_index = mask + (n * channels + c) * in_h * in_w;
+        // index of the max value in the input gradient
+        const float* in_index = in_data + (n * channels + c) * in_h * in_w;
+
+        for (int ph = hstart; ph < hend; ++ph) {
+            for (int pw = wstart; pw < wend; ++pw) {
+                gradient += (mask_index[ph * in_w + pw] == h * out_w + w) ? in_index[ph * in_w + pw] : 0;
+            }
+        }
+        out_data[index] = gradient;
+    }
 }
