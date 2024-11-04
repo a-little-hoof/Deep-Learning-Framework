@@ -111,6 +111,24 @@ int main(){
     maxpool_backward(dY2, mask, dX2);
     dX2.print();
     printf("dX2\n");
+    printf("\n\n");
+
+    //test softmax_forward
+    printf("testing softmax_forward...\n\n");
+    std::vector<int> shape7 = {2, 3};
+    Tensor X3(shape7, "CPU");
+    Tensor Y3(std::vector<int>{2, 3}, "GPU");
+    for (int i = 0; i < 6; i++){
+        X3.data[i] = i+1;
+    }
+    X3.gpu();
+    X3.print();
+    printf("X3\n\n");
+    Y3.fill_(1.0);
+    softmax_forward(X3, Y3);
+    Y3.print();
+    printf("Y3\n");
+    printf("\n\n");
 
 
     

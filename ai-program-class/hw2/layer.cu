@@ -354,3 +354,113 @@ __global__ void max_pool_backward_kernel(int nthreads, float* in_data,
         out_data[index] = gradient;
     }
 }
+
+//softmax
+// X: [N, C], Y: [N, C]
+void softmax_forward(const Tensor& X, Tensor& Y){
+    int batch_size = X.shape[0];
+    int num_classes = X.shape[1];
+    int len = batch_size * num_classes;
+
+    //take max for each batch
+    Tensor max_val(std::vector<int>{batch_size}, "GPU");
+    max_kernel<<<CudaGetBlocks(batch_size), kCudaThreadsNum>>>(X.data, batch_size, num_classes, max_val.data);
+    cudaDeviceSynchronize();
+    printf("max_val\n");
+    max_val.print();
+
+    Tensor unnormalized(std::vector<int>{batch_size, num_classes}, "GPU");
+    exp_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(X.data, len, num_classes, max_val.data, unnormalized.data);
+    cudaDeviceSynchronize();
+    printf("unnormalized\n");
+    unnormalized.print();
+
+    Tensor sum_val(std::vector<int>{batch_size}, "GPU");
+    sum_kernel<<<CudaGetBlocks(batch_size), kCudaThreadsNum>>>(unnormalized.data, len, num_classes, sum_val.data);
+    cudaDeviceSynchronize();
+
+
+    div_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(unnormalized.data, len, num_classes, sum_val.data, Y.data);
+    cudaDeviceSynchronize();
+}
+
+__global__ void max_kernel(const float* in_data, int batch_size, int num_classes, float* max_val){
+
+    CUDA_KERNEL_LOOP(index, batch_size){
+        float max = -FLT_MAX;
+        for (int i = 0; i < num_classes; i++){
+            if(in_data[index*num_classes+i] > max){
+                max = in_data[index*num_classes+i];
+            }
+        }
+        max_val[index] = max;
+    }
+}
+
+// for N*C elements, each substracts the max value in the batch and takes the exponential
+__global__ void exp_kernel(const float* in_data, int len, int num_classes, const float* max_val, float* unnormalized){
+    CUDA_KERNEL_LOOP(index, len){
+        int batch = index / num_classes;
+        unnormalized[index] = exp(in_data[index] - max_val[batch]);
+    }
+}
+
+__global__ void sum_kernel(const float* in_data, int batch_size, int num_classes, float* sum_val){
+    CUDA_KERNEL_LOOP(index, batch_size){
+        sum_val[index] = 0;
+        for (int i = 0; i < num_classes; i++){
+            sum_val[index] += in_data[index*num_classes+i];
+        }
+    }
+}
+
+__global__ void div_kernel(const float* in_data, int len, int num_classes, const float* sum_val, float* y){
+    CUDA_KERNEL_LOOP(index, len){
+        int batch = index / num_classes;
+        y[index] = in_data[index] / sum_val[batch];
+    }
+}
+
+
+
+// //cross entropy
+// // Y: [N, C], target: [N], loss: [N]
+// void cross_entropy_forward(const Tensor& Y, const Tensor& target, Tensor& loss){
+//     int batch_size = Y.shape[0];
+//     int num_classes = Y.shape[1];
+//     int len = batch_size;
+
+//     cross_entropy_forward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(len, Y.data, target.data, loss.data);
+//     cudaDeviceSynchronize();
+// }
+
+// __global__ void cross_entropy_forward_kernel(int nthreads, float* in_data, float* target, float* out_data) {
+//     CUDA_KERNEL_LOOP(index, nthreads) {
+//         //cross entropy forward
+//         //cross_entropy = -sum(target * log(y))
+//         //here we calculate the cross entropy for each element in the input matrix
+//         //and store the result in the output matrix
+//         out_data[index] = -log(in_data[index * nthreads + target[index]]);
+//     }
+// }
+
+// //cross entropy with softmax backward
+// // Y: [N, C], target: [N], dY: [N, C], dX: [N, C]
+// void cross_entropy_backward(const Tensor& Y, const Tensor& target, Tensor& dY, Tensor& dX){
+//     int batch_size = Y.shape[0];
+//     int num_classes = Y.shape[1];
+//     int len = batch_size;
+
+//     cross_entropy_backward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(len, Y.data, target.data, dY.data, dX.data);
+//     cudaDeviceSynchronize();
+// }
+
+// __global__ void cross_entropy_backward_kernel(int nthreads, float* in_data, float* target, float* dY, float* dX) {
+//     CUDA_KERNEL_LOOP(index, nthreads) {
+//         //cross entropy backward
+//         //dX = y - target
+//         //here we calculate the gradient of the input matrix
+//         //and store the result in the output matrix
+//         dX[index] = in_data[index] - (index == target[index]);
+//     }
+// }

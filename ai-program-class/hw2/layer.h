@@ -4,8 +4,11 @@
 #include "tensor.h"
 #include <cublas_v2.h>
 
+//fc
 void fc_forward(const Tensor& X, const Tensor& W, const Tensor& b,Tensor& Y);
 void fc_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& dW, Tensor& dX);
+void gemm_gpu(cublasOperation_t trans_A, cublasOperation_t trans_B, const int m, const int k, const int n, 
+const float alpha, const float *A, const float *B, const float beta, float *C);
 
 //conv
 void conv_forward(const Tensor& X, const Tensor& W, Tensor& Y);
@@ -33,14 +36,14 @@ __global__ void max_pool_backward_kernel(int nthreads, float* in_data,
 
 //softmax
 void softmax_forward(const Tensor& X, Tensor& Y);
-void softmax_backward(const Tensor& dY, const Tensor& Y, Tensor& dX);
+__global__ void max_kernel(const float* in_data, int batch_size, int num_classes, float* max_val);
+__global__ void exp_kernel(const float* in_data, int len, int num_class, const float* max_val, float* unnormalized);
+__global__ void sum_kernel(const float* in_data, int len, int num_classes, float* sum_val);
+__global__ void div_kernel(const float* in_data, int len, int num_classes, const float* sum_val, float* y);
 
 //cross entropy loss
 void cross_entropy_forward(const Tensor& X, const Tensor& label, Tensor& loss);
-void cross_entropy_backward(const Tensor& X, const Tensor& label, Tensor& dX);
+void cross_entropy_with_softmax_backward(const Tensor& X, const Tensor& label, Tensor& dX);
 
-//other functions
-void gemm_gpu(cublasOperation_t trans_A, cublasOperation_t trans_B, const int m, const int k, const int n, 
-const float alpha, const float *A, const float *B, const float beta, float *C);
 
 #endif
