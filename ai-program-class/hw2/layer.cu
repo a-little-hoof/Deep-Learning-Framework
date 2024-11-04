@@ -366,14 +366,14 @@ void softmax_forward(const Tensor& X, Tensor& Y){
     Tensor max_val(std::vector<int>{batch_size}, "GPU");
     max_kernel<<<CudaGetBlocks(batch_size), kCudaThreadsNum>>>(X.data, batch_size, num_classes, max_val.data);
     cudaDeviceSynchronize();
-    printf("max_val\n");
-    max_val.print();
+    // printf("max_val\n");
+    // max_val.print();
 
     Tensor unnormalized(std::vector<int>{batch_size, num_classes}, "GPU");
     exp_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(X.data, len, num_classes, max_val.data, unnormalized.data);
     cudaDeviceSynchronize();
-    printf("unnormalized\n");
-    unnormalized.print();
+    // printf("unnormalized\n");
+    // unnormalized.print();
 
     Tensor sum_val(std::vector<int>{batch_size}, "GPU");
     sum_kernel<<<CudaGetBlocks(batch_size), kCudaThreadsNum>>>(unnormalized.data, len, num_classes, sum_val.data);
@@ -423,26 +423,29 @@ __global__ void div_kernel(const float* in_data, int len, int num_classes, const
 
 
 
-// //cross entropy
-// // Y: [N, C], target: [N], loss: [N]
-// void cross_entropy_forward(const Tensor& Y, const Tensor& target, Tensor& loss){
-//     int batch_size = Y.shape[0];
-//     int num_classes = Y.shape[1];
-//     int len = batch_size;
+//cross entropy
+// Y: [N, C], target: [N], loss: [N]
+void cross_entropy_forward(const Tensor& X, const Tensor& target, Tensor& loss){
+    int batch_size = X.shape[0];
+    int num_classes = X.shape[1];
+    int len = batch_size;
 
-//     cross_entropy_forward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(len, Y.data, target.data, loss.data);
-//     cudaDeviceSynchronize();
-// }
+    printf("didn't take mean\n\n");
 
-// __global__ void cross_entropy_forward_kernel(int nthreads, float* in_data, float* target, float* out_data) {
-//     CUDA_KERNEL_LOOP(index, nthreads) {
-//         //cross entropy forward
-//         //cross_entropy = -sum(target * log(y))
-//         //here we calculate the cross entropy for each element in the input matrix
-//         //and store the result in the output matrix
-//         out_data[index] = -log(in_data[index * nthreads + target[index]]);
-//     }
-// }
+    Tensor probablity(std::vector<int>{batch_size}, "GPU");
+    softmax_forward(X, probablity);
+    Tensor single_CE(std::vector<int>{batch_size}, "GPU");
+    cross_entropy_forward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(len, probablity.data, target.data, single_CE.data);
+    cudaDeviceSynchronize();
+    sum_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(single_CE.data, 1, len, loss.data);
+    cudaDeviceSynchronize();
+}
+
+__global__ void cross_entropy_forward_kernel(int nthreads, const float* in_data, const float* target, float* out_data) {
+    CUDA_KERNEL_LOOP(index, nthreads) {
+        out_data[index] = -log(in_data[static_cast<int>(target[index])]);
+    }
+}
 
 // //cross entropy with softmax backward
 // // Y: [N, C], target: [N], dY: [N, C], dX: [N, C]

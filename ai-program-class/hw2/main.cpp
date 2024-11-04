@@ -130,6 +130,30 @@ int main(){
     printf("Y3\n");
     printf("\n\n");
 
+    //test cross_entropy_forward
+    printf("testing cross_entropy_forward...\n\n");
+    std::vector<int> shape8 = {2, 3};
+    Tensor X4(shape8, "CPU");
+    Tensor label(std::vector<int>{2}, "CPU");
+    Tensor loss(std::vector<int>{1}, "GPU");
+    for (int i = 0; i < 6; i++){
+        X4.data[i] = i+1;
+    }
+    for (int i = 0; i < 2; i++){
+        label.data[i] = i+1;
+    }
+    X4.gpu();
+    label.gpu();
+    X4.print();
+    printf("X4\n\n");
+    label.print();
+    printf("label\n\n");
+    loss.fill_(1.0);
+    cross_entropy_forward(X4, label, loss);
+    loss.print();
+    printf("loss\n");
+    printf("\n\n");
+
 
     
     return 0;

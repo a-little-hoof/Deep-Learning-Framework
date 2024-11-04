@@ -44,6 +44,7 @@ __global__ void div_kernel(const float* in_data, int len, int num_classes, const
 //cross entropy loss
 void cross_entropy_forward(const Tensor& X, const Tensor& label, Tensor& loss);
 void cross_entropy_with_softmax_backward(const Tensor& X, const Tensor& label, Tensor& dX);
+__global__ void cross_entropy_forward_kernel(int nthreads, const float* in_data, const float* target, float* out_data);
 
 
 #endif
