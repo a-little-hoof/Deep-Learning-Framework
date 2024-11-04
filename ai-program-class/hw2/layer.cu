@@ -424,7 +424,7 @@ __global__ void div_kernel(const float* in_data, int len, int num_classes, const
 
 
 //cross entropy
-// Y: [N, C], target: [N], loss: [N]
+// Y: [N, C], target: [N, C], loss: [N]
 void cross_entropy_forward(const Tensor& X, const Tensor& target, Tensor& loss){
     int batch_size = X.shape[0];
     int num_classes = X.shape[1];
@@ -432,38 +432,40 @@ void cross_entropy_forward(const Tensor& X, const Tensor& target, Tensor& loss){
 
     printf("didn't take mean\n\n");
 
-    Tensor probablity(std::vector<int>{batch_size}, "GPU");
+    Tensor probablity(std::vector<int>{batch_size, num_classes}, "GPU");
     softmax_forward(X, probablity);
     Tensor single_CE(std::vector<int>{batch_size}, "GPU");
-    cross_entropy_forward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(len, probablity.data, target.data, single_CE.data);
+    cross_entropy_forward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(len, num_classes, probablity.data, target.data, single_CE.data);
     cudaDeviceSynchronize();
     sum_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(single_CE.data, 1, len, loss.data);
     cudaDeviceSynchronize();
 }
 
-__global__ void cross_entropy_forward_kernel(int nthreads, const float* in_data, const float* target, float* out_data) {
+__global__ void cross_entropy_forward_kernel(int nthreads, int num_classes, const float* in_data, const float* target, float* out_data) {
     CUDA_KERNEL_LOOP(index, nthreads) {
-        out_data[index] = -log(in_data[static_cast<int>(target[index])]);
+        out_data[index] = 0;
+        for (int i = 0; i < num_classes; i++){
+            out_data[index] += -log(in_data[index*num_classes+i])*target[index*num_classes+i];
+        }
     }
 }
 
-// //cross entropy with softmax backward
-// // Y: [N, C], target: [N], dY: [N, C], dX: [N, C]
-// void cross_entropy_backward(const Tensor& Y, const Tensor& target, Tensor& dY, Tensor& dX){
-//     int batch_size = Y.shape[0];
-//     int num_classes = Y.shape[1];
-//     int len = batch_size;
+//cross entropy with softmax backward
+// L: [1], dX: [N, C], label: [N, C] one-hot
+void cross_entropy_with_softmax_backward(const Tensor& L, const Tensor& X, const Tensor& label, Tensor& dX){
+    int batch_size = X.shape[0];
+    int num_classes = X.shape[1];
+    int len = batch_size*num_classes;
 
-//     cross_entropy_backward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(len, Y.data, target.data, dY.data, dX.data);
-//     cudaDeviceSynchronize();
-// }
+    Tensor probablity(std::vector<int>{batch_size, num_classes}, "GPU");
+    softmax_forward(X, probablity);
 
-// __global__ void cross_entropy_backward_kernel(int nthreads, float* in_data, float* target, float* dY, float* dX) {
-//     CUDA_KERNEL_LOOP(index, nthreads) {
-//         //cross entropy backward
-//         //dX = y - target
-//         //here we calculate the gradient of the input matrix
-//         //and store the result in the output matrix
-//         dX[index] = in_data[index] - (index == target[index]);
-//     }
-// }
+    minus_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(probablity.data, len, label.data, dX.data);
+    cudaDeviceSynchronize();
+}
+
+__global__ void minus_kernel(const float* in_data, int len, const float* target, float* out_data){
+    CUDA_KERNEL_LOOP(index, len){
+        out_data[index] = in_data[index] - target[index];
+    }
+}

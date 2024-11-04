@@ -134,14 +134,17 @@ int main(){
     printf("testing cross_entropy_forward...\n\n");
     std::vector<int> shape8 = {2, 3};
     Tensor X4(shape8, "CPU");
-    Tensor label(std::vector<int>{2}, "CPU");
+    Tensor label(std::vector<int>{2, 3}, "CPU");
     Tensor loss(std::vector<int>{1}, "GPU");
     for (int i = 0; i < 6; i++){
         X4.data[i] = i+1;
     }
-    for (int i = 0; i < 2; i++){
-        label.data[i] = i+1;
-    }
+    label.data[0] = 0;
+    label.data[1] = 1;
+    label.data[2] = 0;
+    label.data[3] = 0;
+    label.data[4] = 0;
+    label.data[5] = 1;
     X4.gpu();
     label.gpu();
     X4.print();
@@ -153,6 +156,16 @@ int main(){
     loss.print();
     printf("loss\n");
     printf("\n\n");
+
+    //test cross_entropy_with_softmax_backward
+    printf("testing cross_entropy_with_softmax_backward...\n\n");
+    Tensor L(std::vector<int>{1}, "GPU");
+    L.fill_(1.0);
+    Tensor dX4(shape8, "GPU");
+    dX4.fill_(0.0);
+    cross_entropy_with_softmax_backward(L, X4, label, dX4);
+    dX4.print();
+    printf("dX4\n");
 
 
     
