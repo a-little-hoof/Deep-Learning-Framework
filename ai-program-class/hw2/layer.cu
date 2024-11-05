@@ -1,5 +1,6 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
+#include <cuda.h>
 #include <vector>
 #include <string>
 #include <tensor.h>
@@ -318,6 +319,7 @@ void maxpool_backward(const Tensor& dY, const Tensor& mask, Tensor& dX){
 
     max_pool_backward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(
         len, dY.data, mask.data, channels, in_h, in_w, out_h, out_w, kernel_h, kernel_w, pad_h, pad_w, stride_h, stride_w, dX.data);
+    CUDA_POST_KERNEL_CHECK;
     cudaDeviceSynchronize();
 }
 
@@ -362,26 +364,37 @@ void softmax_forward(const Tensor& X, Tensor& Y){
     int num_classes = X.shape[1];
     int len = batch_size * num_classes;
 
+    // printf("I'm here\n\n");
     //take max for each batch
     Tensor max_val(std::vector<int>{batch_size}, "GPU");
     max_kernel<<<CudaGetBlocks(batch_size), kCudaThreadsNum>>>(X.data, batch_size, num_classes, max_val.data);
+    CUDA_POST_KERNEL_CHECK;
     cudaDeviceSynchronize();
     // printf("max_val\n");
     // max_val.print();
 
+    // printf("I'm here 0\n\n");
+
     Tensor unnormalized(std::vector<int>{batch_size, num_classes}, "GPU");
     exp_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(X.data, len, num_classes, max_val.data, unnormalized.data);
+    CUDA_POST_KERNEL_CHECK;
     cudaDeviceSynchronize();
     // printf("unnormalized\n");
     // unnormalized.print();
 
+    // printf("I'm here 1\n\n");
+
     Tensor sum_val(std::vector<int>{batch_size}, "GPU");
-    sum_kernel<<<CudaGetBlocks(batch_size), kCudaThreadsNum>>>(unnormalized.data, len, num_classes, sum_val.data);
+    sum_kernel<<<CudaGetBlocks(batch_size), kCudaThreadsNum>>>(unnormalized.data, batch_size, num_classes, sum_val.data);
+    CUDA_POST_KERNEL_CHECK;
     cudaDeviceSynchronize();
+    // printf("I'm here 2\n\n");
 
 
     div_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(unnormalized.data, len, num_classes, sum_val.data, Y.data);
+    CUDA_POST_KERNEL_CHECK;
     cudaDeviceSynchronize();
+    // printf("I'm here 3\n\n");
 }
 
 __global__ void max_kernel(const float* in_data, int batch_size, int num_classes, float* max_val){
@@ -428,17 +441,22 @@ __global__ void div_kernel(const float* in_data, int len, int num_classes, const
 void cross_entropy_forward(const Tensor& X, const Tensor& target, Tensor& loss){
     int batch_size = X.shape[0];
     int num_classes = X.shape[1];
-    int len = batch_size;
 
     printf("didn't take mean\n\n");
 
     Tensor probablity(std::vector<int>{batch_size, num_classes}, "GPU");
     softmax_forward(X, probablity);
+    // printf("I'm here\n\n");
     Tensor single_CE(std::vector<int>{batch_size}, "GPU");
-    cross_entropy_forward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(len, num_classes, probablity.data, target.data, single_CE.data);
+    cross_entropy_forward_kernel<<<CudaGetBlocks(batch_size), kCudaThreadsNum>>>(batch_size, num_classes, probablity.data, target.data, single_CE.data);
+    CUDA_POST_KERNEL_CHECK;
     cudaDeviceSynchronize();
-    sum_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(single_CE.data, 1, len, loss.data);
+    // printf("I'm here 1\n\n");
+
+    cross_entropy_forward_sum_kernel<<<CudaGetBlocks(1), kCudaThreadsNum>>>(1, batch_size, single_CE.data, loss.data);
+    CUDA_POST_KERNEL_CHECK;
     cudaDeviceSynchronize();
+    // printf("I'm here 2\n\n");
 }
 
 __global__ void cross_entropy_forward_kernel(int nthreads, int num_classes, const float* in_data, const float* target, float* out_data) {
@@ -446,6 +464,14 @@ __global__ void cross_entropy_forward_kernel(int nthreads, int num_classes, cons
         out_data[index] = 0;
         for (int i = 0; i < num_classes; i++){
             out_data[index] += -log(in_data[index*num_classes+i])*target[index*num_classes+i];
+        }
+    }
+}
+
+__global__ void cross_entropy_forward_sum_kernel(int nthreads, int batch_size, const float* in_data, float* out_data) {
+    CUDA_KERNEL_LOOP(index, nthreads) {
+        for (int i = 0; i < batch_size; i++){
+            out_data[0] += in_data[i];
         }
     }
 }
@@ -461,6 +487,7 @@ void cross_entropy_with_softmax_backward(const Tensor& L, const Tensor& X, const
     softmax_forward(X, probablity);
 
     minus_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(probablity.data, len, label.data, dX.data);
+    CUDA_POST_KERNEL_CHECK;
     cudaDeviceSynchronize();
 }
 

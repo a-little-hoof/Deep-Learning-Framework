@@ -18,21 +18,21 @@ Tensor::Tensor(vector<int> s, string d): shape(s), device(d), data(nullptr){
 }
 
 Tensor::~Tensor(){
-    if (device=="CPU"){
-        free(data);
-    }
-    else{
-        cudaFree(data);
+    if (data) {
+        if (device == "CPU") {
+            free(data);
+        }
+        else {
+            cudaFree(data);
+        }
     }
 }
 
 void Tensor::cpu(){
-    if (device=="GPU"){
-        float* data_cpu = nullptr;
+    if (device == "GPU") {
         int size = get_size();
-        data_cpu = (float*)malloc(size*sizeof(float));
-        cudaMemcpy(data_cpu, data, size*sizeof(float), cudaMemcpyDeviceToHost);
-        cudaDeviceSynchronize();
+        float* data_cpu = (float*)malloc(size * sizeof(float));
+        cudaMemcpy(data_cpu, data, size * sizeof(float), cudaMemcpyDeviceToHost);
         cudaFree(data);
         data = data_cpu;
         device = "CPU";
@@ -40,15 +40,13 @@ void Tensor::cpu(){
 }
 
 void Tensor::gpu(){
-    if (device=="CPU"){
-        float* data_gpu = nullptr;
+    if (device == "CPU") {
         int size = get_size();
-        cudaMalloc(&data_gpu, size*sizeof(float));
-        cudaMemcpy(data_gpu, data, size*sizeof(float), cudaMemcpyHostToDevice);
-        cudaDeviceSynchronize();
-        free(data);
+        float* data_gpu = nullptr;
+        cudaMalloc(&data_gpu, size * sizeof(float));
+        cudaMemcpy(data_gpu, data, size * sizeof(float), cudaMemcpyHostToDevice);
+        free(data); 
         data = data_gpu;
-        // cudaMemcpy(data, data_gpu, size*sizeof(float), cudaMemcpyDeviceToHost);
         device = "GPU";
     }
 }

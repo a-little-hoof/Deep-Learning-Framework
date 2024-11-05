@@ -6,12 +6,16 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-// CUDA: various checks for different function calls.
+
 #define CUDA_CHECK(condition)                                        \
   do {                                                               \
     cudaError_t error = condition;                                   \
-    CHECK(error == cudaSuccess) << " " << cudaGetErrorString(error); \
+    if (error != cudaSuccess) {                                      \
+      printf("CHECK failed: %s at %s:%d\n", cudaGetErrorString(error), __FILE__, __LINE__); \
+      exit(EXIT_FAILURE);                                            \
+    }                                                                \
   } while (0)
+
 
 // CUDA: grid stride looping
 #define CUDA_KERNEL_LOOP(i, n)                                       \
