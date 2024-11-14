@@ -4,6 +4,8 @@
 #include "tensor.h"
 #include <cublas_v2.h>
 
+void matrix_init(Tensor& X);
+
 //fc
 void fc_forward(const Tensor& X, const Tensor& W, const Tensor& b,Tensor& Y);
 void fc_backward(const Tensor& dY, const Tensor& X, const Tensor& W, Tensor& dW, Tensor& dX);

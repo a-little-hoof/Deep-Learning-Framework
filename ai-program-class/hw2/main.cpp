@@ -2,6 +2,17 @@
 #include "tensor.h"
 
 int main(){
+    //test init 
+    printf("testing init...\n\n");
+    std::vector<int> shape0 = {2, 3};
+    Tensor a(shape0, "GPU");
+    a.fill_(0);
+    a.print();
+    printf("a\n\n");
+    matrix_init(a);
+    a.print();
+    printf("a\n\n");
+
     //test fc_forward
     printf("testing fc_forward...\n\n");
     std::vector<int> shape1 = {2, 3};
