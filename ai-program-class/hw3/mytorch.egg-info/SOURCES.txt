@@ -1,0 +1,10 @@
+setup.py
+mytorch.egg-info/PKG-INFO
+mytorch.egg-info/SOURCES.txt
+mytorch.egg-info/dependency_links.txt
+mytorch.egg-info/not-zip-safe
+mytorch.egg-info/requires.txt
+mytorch.egg-info/top_level.txt
+src/layer.cu
+src/pybind.cpp
+src/tensor.cu
