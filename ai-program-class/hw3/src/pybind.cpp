@@ -7,6 +7,9 @@ namespace py = pybind11;
 PYBIND11_MODULE(mytorch, m) {
     py::class_<Tensor>(m, "Tensor")
     .def(py::init<const std::vector<int>&, const std::string&>())
+    .def_readwrite("shape", &Tensor::shape)
+    .def_readwrite("device", &Tensor::device)
+    .def_readwrite("data", &Tensor::data)
     .def("cpu", &Tensor::cpu)
     .def("gpu", &Tensor::gpu)
     .def("get_size", &Tensor::get_size)
