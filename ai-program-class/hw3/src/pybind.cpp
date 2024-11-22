@@ -2,6 +2,7 @@
 #include "layer.h"
 #include<pybind11/pybind11.h>
 #include<pybind11/stl.h>
+#include<pybind11/numpy.h>
 namespace py = pybind11;
 
 PYBIND11_MODULE(mytorch, m) {
@@ -9,12 +10,26 @@ PYBIND11_MODULE(mytorch, m) {
     .def(py::init<const std::vector<int>&, const std::string&>())
     .def_readwrite("shape", &Tensor::shape)
     .def_readwrite("device", &Tensor::device)
-    .def_readwrite("data", &Tensor::data)
     .def("cpu", &Tensor::cpu)
     .def("gpu", &Tensor::gpu)
     .def("get_size", &Tensor::get_size)
     .def("print", &Tensor::print)
-    .def("fill_", &Tensor::fill_);
+    .def("fill_", &Tensor::fill_)
+    .def_property_readonly("data", [](Tensor &t) {
+        std::vector<ssize_t> shape(t.shape.begin(), t.shape.end());
+        std::vector<ssize_t> strides(shape.size());
+        ssize_t stride = sizeof(float);
+        for (ssize_t i = shape.size() - 1; i >= 0; --i) {
+            strides[i] = stride;
+            stride *= shape[i];
+        }
+        return py::array_t<float>(
+            t.shape,   // shape
+            strides, // strides
+            t.data,  // data pointer
+            py::cast(t) // base object
+        );
+    });
 
     // 绑定 layer 函数
     m.def("matrix_init", &matrix_init, "Initialize matrix in Tensor");

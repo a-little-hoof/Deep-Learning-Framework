@@ -56,7 +56,7 @@ class TestTensor(unittest.TestCase):
 
         # Verify data integrity after conversion
         my_tensor_data = np.array(my_tensor.data[:my_tensor.get_size()])
-        expected_data = np.full(shape, value, dtype=np.float32).flatten()
+        expected_data = np.full(shape, value, dtype=np.float32)
         np.testing.assert_allclose(my_tensor_data, expected_data)
 
     def test_print(self):
