@@ -239,25 +239,26 @@ class TestLayer(unittest.TestCase):
 
     def test_softmax_forward(self):
         # Example shapes
-        input_shape = [2, 10]
-        output_shape = [2, 10]
+        input_shape = [4, 50]
+        output_shape = [4, 50]
 
         # Initialize custom Tensors
-        input_tensor = mytorch.Tensor(input_shape, "CPU")
-        output_tensor = mytorch.Tensor(output_shape, "CPU")
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        output_tensor = mytorch.Tensor(output_shape, "GPU")
         mytorch.matrix_init(input_tensor)
 
         # Initialize PyTorch tensors
-        input_torch = torch.rand(input_shape, dtype=torch.float32)
+        input_torch = MyTensorToTorchTensor(input_tensor.copy())
 
         # Custom forward pass
         mytorch.softmax_forward(input_tensor, output_tensor)
 
         # PyTorch forward pass
-        torch_output = torch.nn.functional.softmax(input_torch, dim=1)
+        torch_output = torch.nn.functional.softmax(input_torch, dim=-1)
 
         # Compare data
-        my_output_data = np.array(output_tensor.data)
+        output_tensor.cpu()
+        my_output_data = np.array(output_tensor.data[:output_tensor.get_size()])
         torch_output_data = torch_output.detach().numpy()
 
         np.testing.assert_allclose(my_output_data, torch_output_data, rtol=1e-5, atol=1e-8)
@@ -269,15 +270,16 @@ class TestLayer(unittest.TestCase):
         output_shape = [1]
 
         # Initialize custom Tensors
-        input_tensor = mytorch.Tensor(input_shape, "CPU")
-        target_tensor = mytorch.Tensor(target_shape, "CPU")
-        output_tensor = mytorch.Tensor(output_shape, "CPU")
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        target_tensor = mytorch.Tensor(target_shape, "GPU")
+        output_tensor = mytorch.Tensor(output_shape, "GPU")
         mytorch.matrix_init(input_tensor)
         mytorch.matrix_init(target_tensor)
 
         # Initialize PyTorch tensors
-        input_torch = torch.rand(input_shape, dtype=torch.float32)
-        target_torch = torch.randint(0, 10, target_shape, dtype=torch.long)
+        input_torch = MyTensorToTorchTensor(input_tensor.copy())
+        target_torch =  MyTensorToTorchTensor(target_tensor.copy()).long()
+        # print(target_torch)
 
         # Custom forward pass
         mytorch.cross_entropy_forward(input_tensor, target_tensor, output_tensor)
@@ -286,7 +288,8 @@ class TestLayer(unittest.TestCase):
         torch_output = torch.nn.functional.cross_entropy(input_torch, target_torch)
 
         # Compare data
-        my_output_data = np.array(output_tensor.data)
+        output_tensor.cpu()
+        my_output_data = np.array(output_tensor.data[:output_tensor.get_size()])
         torch_output_data = torch_output.detach().numpy()
 
         np.testing.assert_allclose(my_output_data, torch_output_data, rtol=1e-5, atol=1e-8)

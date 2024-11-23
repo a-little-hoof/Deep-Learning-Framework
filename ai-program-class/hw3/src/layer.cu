@@ -458,7 +458,7 @@ void cross_entropy_forward(const Tensor& X, const Tensor& target, Tensor& loss){
     int batch_size = X.shape[0];
     int num_classes = X.shape[1];
 
-    printf("didn't take mean\n\n");
+    // printf("didn't take mean\n\n");
 
     Tensor probablity(std::vector<int>{batch_size, num_classes}, "GPU");
     softmax_forward(X, probablity);
