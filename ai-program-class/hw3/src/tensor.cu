@@ -108,3 +108,26 @@ void Tensor::fill_(float value){
         free(data_cpu);
     }
 }
+
+Tensor* Tensor::copy(){
+    Tensor* t = new Tensor(shape, "CPU");
+    if (device=="CPU"){
+        for (int i=0; i<get_size(); ++i){
+            t->data[i] = data[i];
+        }
+    }
+    else{
+        float* data_cpu = nullptr;
+        int size = get_size();
+        data_cpu = (float*)malloc(size*sizeof(float));
+        cudaMemcpy(data_cpu, data, size*sizeof(float), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        for (int i=0; i<size; ++i){
+            t->data[i] = data_cpu[i];
+        }
+        free(data_cpu);
+        // move to GPU
+        t->gpu();
+    }
+    return t;
+}

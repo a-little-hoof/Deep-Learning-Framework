@@ -15,6 +15,7 @@ PYBIND11_MODULE(mytorch, m) {
     .def("get_size", &Tensor::get_size)
     .def("print", &Tensor::print)
     .def("fill_", &Tensor::fill_)
+    .def("copy", &Tensor::copy)
     .def_property_readonly("data", [](Tensor &t) {
         std::vector<ssize_t> shape(t.shape.begin(), t.shape.end());
         std::vector<ssize_t> strides(shape.size());

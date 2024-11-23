@@ -25,6 +25,8 @@ class Tensor{
         void print();
 
         void fill_(float value);
+
+        Tensor* copy();
 };
 
 #endif

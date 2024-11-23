@@ -2,24 +2,28 @@ import unittest
 import torch
 import numpy as np
 import mytorch
+import copy
 
-class TestMyTorchFunctions(unittest.TestCase):
+def MyTensorToTorchTensor(my_tensor):
+    my_tensor.cpu()
+    my_tensor_data = np.array(my_tensor.data[:my_tensor.get_size()])
+    torch_tensor_data = torch.tensor(my_tensor_data)
+    return torch_tensor_data
+
+class TestLayer(unittest.TestCase):
 
     def test_matrix_init(self):
         shape = [2, 3]
-        device = "CPU"
+        device = "GPU"
 
         # Initialize custom Tensor
         my_tensor = mytorch.Tensor(shape, device)
         mytorch.matrix_init(my_tensor)
 
-        # Initialize PyTorch tensor
-        torch_tensor = torch.empty(shape, dtype=torch.float32)
-        torch.nn.init.uniform_(torch_tensor, a=0.0, b=1.0)  # Example initialization
-
         # Compare data
-        my_tensor_data = np.array(my_tensor.data)
-        torch_tensor_data = torch_tensor.numpy()
+        my_tensor.cpu()
+        my_tensor_data = np.array(my_tensor.data[:my_tensor.get_size()])
+        torch_tensor_data = MyTensorToTorchTensor(my_tensor.copy()).numpy()
 
         np.testing.assert_allclose(my_tensor_data, torch_tensor_data, rtol=1e-5, atol=1e-8)
 
@@ -30,36 +34,42 @@ class TestMyTorchFunctions(unittest.TestCase):
         bias_shape = [4]
 
         # Initialize custom Tensors
-        input_tensor = mytorch.Tensor(input_shape, "CPU")
-        weight_tensor = mytorch.Tensor(weight_shape, "CPU")
-        bias_tensor = mytorch.Tensor(bias_shape, "CPU")
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        weight_tensor = mytorch.Tensor(weight_shape, "GPU")
+        bias_tensor = mytorch.Tensor(bias_shape, "GPU")
+        output_tensor = mytorch.Tensor([2, 4], "GPU")
         mytorch.matrix_init(input_tensor)
         mytorch.matrix_init(weight_tensor)
         mytorch.matrix_init(bias_tensor)
+        mytorch.matrix_init(output_tensor)
 
         # Initialize PyTorch tensors
-        input_torch = torch.rand(input_shape, dtype=torch.float32)
-        weight_torch = torch.rand(weight_shape, dtype=torch.float32)
-        bias_torch = torch.rand(bias_shape, dtype=torch.float32)
+        # tensor = input_tensor.copy()
+        input_torch = MyTensorToTorchTensor(input_tensor.copy())
+        weight_torch = MyTensorToTorchTensor(weight_tensor.copy())
+        bias_torch = MyTensorToTorchTensor(bias_tensor.copy())
 
+        # print(weight_tensor.shape)
+        # print(weight_torch.shape)
         # Custom forward pass
-        my_output = mytorch.fc_forward(input_tensor, weight_tensor, bias_tensor)
+        mytorch.fc_forward(input_tensor, weight_tensor, bias_tensor, output_tensor)
 
         # PyTorch forward pass
-        torch_output = torch.nn.functional.linear(input_torch, weight_torch, bias_torch)
+        torch_output = torch.nn.functional.linear(input_torch, weight_torch.T, bias_torch)
 
         # Compare data
-        my_output_data = np.array(my_output.data)
+        output_tensor.cpu()
+        my_output_data = np.array(output_tensor.data[:output_tensor.get_size()])
         torch_output_data = torch_output.detach().numpy()
 
         np.testing.assert_allclose(my_output_data, torch_output_data, rtol=1e-5, atol=1e-8)
 
     def test_fc_backward(self):
         # Example shapes
-        input_shape = [2, 3]
-        weight_shape = [3, 4]
+        input_shape = [10, 45]
+        weight_shape = [45, 4]
         bias_shape = [4]
-        grad_output_shape = [2, 4]
+        grad_output_shape = [10, 4]
 
         # Initialize custom Tensors
         input_tensor = mytorch.Tensor(input_shape, "CPU")

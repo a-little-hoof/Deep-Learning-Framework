@@ -8,7 +8,7 @@ import sys
 from contextlib import redirect_stdout
 
 class TestTensor(unittest.TestCase):
-    def test_tensor_creation(self):
+    def test_tensor_cpu_creation(self):
         # Create a Tensor instance with the custom class
         shape = [2, 3]
         device = "CPU"
@@ -21,18 +21,51 @@ class TestTensor(unittest.TestCase):
         self.assertEqual(my_tensor.shape, shape)
         self.assertEqual(my_tensor.device, device)
         self.assertEqual(my_tensor.get_size(), torch_tensor.numel())
+    
+    def test_tensor_gpu_creation(self):
+        # Create a Tensor instance with the custom class
+        shape = [2, 3]
+        device = "GPU"
+        my_tensor = mytorch.Tensor(shape, device)
+
+        # Create an equivalent PyTorch tensor
+        torch_tensor = torch.empty(shape, dtype=torch.float32)
+
+        # Check shape and device
+        self.assertEqual(my_tensor.shape, shape)
+        self.assertEqual(my_tensor.device, device)
+        self.assertEqual(my_tensor.get_size(), torch_tensor.numel())
+    
+    def test_copy_(self):
+        # Test copy_ operation
+        shape = [2, 3]
+        value = 1.23
+
+        my_tensor = mytorch.Tensor(shape, "GPU")
+        my_tensor.fill_(value)
+
+        # Create another tensor
+        my_tensor_copy = my_tensor.copy()
+
+        # Compare data
+        my_tensor.cpu()
+        my_tensor_copy.cpu()
+        my_tensor_data = np.array(my_tensor.data[:my_tensor.get_size()])
+        my_tensor_copy_data = np.array(my_tensor_copy.data[:my_tensor_copy.get_size()])
+        np.testing.assert_allclose(my_tensor_copy_data, my_tensor_data)
 
     def test_fill_(self):
         # Test fill_ operation
         shape = [2, 3]
         value = 5.0
 
-        my_tensor = mytorch.Tensor(shape, "CPU")
+        my_tensor = mytorch.Tensor(shape, "GPU")
         my_tensor.fill_(value)
 
         torch_tensor = torch.full(shape, value, dtype=torch.float32)
 
         # Compare data
+        my_tensor.cpu()
         my_tensor_data = np.array(my_tensor.data[:my_tensor.get_size()])
         torch_tensor_data = torch_tensor.numpy()
 
