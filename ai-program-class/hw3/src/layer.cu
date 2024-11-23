@@ -91,7 +91,7 @@ void conv_forward(const Tensor& X, const Tensor& W, Tensor& Y){
         int num_kernels = C_in * height * width;
     
         im2col_gpu_kernel<<<CudaGetBlocks(num_kernels), kCudaThreadsNum>>>(
-            num_kernels, X.data, 
+            num_kernels, X.data + i * C_in * height * width, 
             height, width, 3, 3, 1, 1,
             X_hat.data);
         cudaDeviceSynchronize();
