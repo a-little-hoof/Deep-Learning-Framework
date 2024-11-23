@@ -266,26 +266,34 @@ class TestLayer(unittest.TestCase):
     def test_cross_entropy_forward(self):
         # Example shapes
         input_shape = [2, 10]
-        target_shape = [2]
+        target_shape = [2, 10]
         output_shape = [1]
 
         # Initialize custom Tensors
+        input_tensor_unnormailized = mytorch.Tensor(input_shape, "GPU")
         input_tensor = mytorch.Tensor(input_shape, "GPU")
-        target_tensor = mytorch.Tensor(target_shape, "GPU")
+        target_tensor = mytorch.Tensor(target_shape, "CPU")
         output_tensor = mytorch.Tensor(output_shape, "GPU")
-        mytorch.matrix_init(input_tensor)
-        mytorch.matrix_init(target_tensor)
+        mytorch.matrix_init(input_tensor_unnormailized)
+        # mytorch.matrix_init(target_tensor)
+        target_tensor.fill_(0)
+        target_tensor.data[1] = 1
+        target_tensor.gpu()
+        target_tensor.print()
+
+        mytorch.softmax_forward(input_tensor_unnormailized, input_tensor)
+        input_tensor.print()
 
         # Initialize PyTorch tensors
         input_torch = MyTensorToTorchTensor(input_tensor.copy())
-        target_torch =  MyTensorToTorchTensor(target_tensor.copy()).long()
+        target_torch =  MyTensorToTorchTensor(target_tensor.copy())
         # print(target_torch)
 
         # Custom forward pass
         mytorch.cross_entropy_forward(input_tensor, target_tensor, output_tensor)
 
         # PyTorch forward pass
-        torch_output = torch.nn.functional.cross_entropy(input_torch, target_torch)
+        torch_output = torch.nn.functional.cross_entropy(input_torch, target_torch, reduction='sum')
 
         # Compare data
         output_tensor.cpu()
