@@ -115,9 +115,9 @@ class TestLayer(unittest.TestCase):
 
     def test_conv_forward(self):
         # Example shapes
-        input_shape = [10, 3, 32, 32]
+        input_shape = [5, 3, 32, 32]
         weight_shape = [6, 3, 3, 3]
-        output_shape = [10, 6, 32, 32]
+        output_shape = [5, 6, 32, 32]
 
         # Initialize custom Tensors
         input_tensor = mytorch.Tensor(input_shape, "GPU")
@@ -146,47 +146,41 @@ class TestLayer(unittest.TestCase):
     def test_conv_backward(self):
         # Example shapes
         input_shape = [1, 3, 32, 32]
-        weight_shape = [6, 3, 5, 5]
-        bias_shape = [6]
-        grad_output_shape = [1, 6, 28, 28]
+        weight_shape = [6, 3, 3, 3]
+        grad_output_shape = [1, 6, 32, 32]
 
         # Initialize custom Tensors
-        input_tensor = mytorch.Tensor(input_shape, "CPU")
-        weight_tensor = mytorch.Tensor(weight_shape, "CPU")
-        bias_tensor = mytorch.Tensor(bias_shape, "CPU")
-        grad_output_tensor = mytorch.Tensor(grad_output_shape, "CPU")
-        grad_input_tensor = mytorch.Tensor(input_shape, "CPU")
-        grad_weight_tensor = mytorch.Tensor(weight_shape, "CPU")
-        grad_bias_tensor = mytorch.Tensor(bias_shape, "CPU")
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        weight_tensor = mytorch.Tensor(weight_shape, "GPU")
+        grad_output_tensor = mytorch.Tensor(grad_output_shape, "GPU")
+        grad_input_tensor = mytorch.Tensor(input_shape, "GPU")
+        grad_weight_tensor = mytorch.Tensor(weight_shape, "GPU")
         mytorch.matrix_init(input_tensor)
         mytorch.matrix_init(weight_tensor)
-        mytorch.matrix_init(bias_tensor)
         mytorch.matrix_init(grad_output_tensor)
 
         # Initialize PyTorch tensors
-        input_torch = torch.rand(input_shape, dtype=torch.float32, requires_grad=True)
-        weight_torch = torch.rand(weight_shape, dtype=torch.float32, requires_grad=True)
-        bias_torch = torch.rand(bias_shape, dtype=torch.float32, requires_grad=True)
-        grad_output_torch = torch.rand(grad_output_shape, dtype=torch.float32)
+        input_torch = MyTensorToTorchTensor(input_tensor.copy()).requires_grad_(True)
+        weight_torch = MyTensorToTorchTensor(weight_tensor.copy()).requires_grad_(True)
+        grad_output_torch = MyTensorToTorchTensor(grad_output_tensor.copy())
 
         # Custom backward pass
-        mytorch.conv_backward(input_tensor, weight_tensor, bias_tensor, grad_output_tensor, grad_input_tensor, grad_weight_tensor, grad_bias_tensor)
+        mytorch.conv_backward(grad_output_tensor, input_tensor, weight_tensor, grad_weight_tensor, grad_input_tensor)
 
         # PyTorch backward pass
-        torch_output = torch.nn.functional.conv2d(input_torch, weight_torch, bias_torch)
+        torch_output = torch.nn.functional.conv2d(input_torch, weight_torch, padding=1)
         torch_output.backward(grad_output_torch)
 
         # Compare data
-        my_grad_input_data = np.array(grad_input_tensor.data)
-        my_grad_weight_data = np.array(grad_weight_tensor.data)
-        my_grad_bias_data = np.array(grad_bias_tensor.data)
+        grad_input_tensor.cpu()
+        grad_weight_tensor.cpu()
+        my_grad_input_data = np.array(grad_input_tensor.data[:grad_input_tensor.get_size()])
+        my_grad_weight_data = np.array(grad_weight_tensor.data[:grad_weight_tensor.get_size()])
         torch_grad_input_data = input_torch.grad.detach().numpy()
         torch_grad_weight_data = weight_torch.grad.detach().numpy()
-        torch_grad_bias_data = bias_torch.grad.detach().numpy()
 
         np.testing.assert_allclose(my_grad_input_data, torch_grad_input_data, rtol=1e-5, atol=1e-8)
         np.testing.assert_allclose(my_grad_weight_data, torch_grad_weight_data, rtol=1e-5, atol=1e-8)
-        np.testing.assert_allclose(my_grad_bias_data, torch_grad_bias_data, rtol=1e-5, atol=1e-8)
 
     def test_maxpool_forward(self):
         # Example shapes
