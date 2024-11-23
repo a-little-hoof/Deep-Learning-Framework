@@ -213,27 +213,32 @@ class TestLayer(unittest.TestCase):
         # Example shapes
         input_shape = [1, 3, 32, 32]
         grad_output_shape = [1, 3, 16, 16]
+        output_shape = [1, 3, 16, 16]
+        mask_shape = [1, 3, 16, 16]
 
         # Initialize custom Tensors
-        input_tensor = mytorch.Tensor(input_shape, "CPU")
-        grad_output_tensor = mytorch.Tensor(grad_output_shape, "CPU")
-        grad_input_tensor = mytorch.Tensor(input_shape, "CPU")
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        mask_tensor = mytorch.Tensor(mask_shape, "GPU")
+        output_tensor = mytorch.Tensor(output_shape, "GPU")
+        grad_output_tensor = mytorch.Tensor(grad_output_shape, "GPU")
+        grad_input_tensor = mytorch.Tensor(input_shape, "GPU")
         mytorch.matrix_init(input_tensor)
         mytorch.matrix_init(grad_output_tensor)
 
-        # Initialize PyTorch tensors
-        input_torch = torch.rand(input_shape, dtype=torch.float32, requires_grad=True)
-        grad_output_torch = torch.rand(grad_output_shape, dtype=torch.float32)
+        mytorch.maxpool_forward(input_tensor, output_tensor, mask_tensor)
+        mytorch.maxpool_backward(grad_output_tensor, mask_tensor, grad_input_tensor)
 
-        # Custom backward pass
-        mytorch.maxpool_backward(input_tensor, grad_output_tensor, grad_input_tensor)
+        # Initialize PyTorch tensors
+        input_torch = MyTensorToTorchTensor(input_tensor.copy()).requires_grad_(True)
+        grad_output_torch = MyTensorToTorchTensor(grad_output_tensor.copy())
 
         # PyTorch backward pass
         torch_output = torch.nn.functional.max_pool2d(input_torch, kernel_size=2)
         torch_output.backward(grad_output_torch)
 
         # Compare data
-        my_grad_input_data = np.array(grad_input_tensor.data)
+        grad_input_tensor.cpu()
+        my_grad_input_data = np.array(grad_input_tensor.data[:grad_input_tensor.get_size()])
         torch_grad_input_data = input_torch.grad.detach().numpy()
 
         np.testing.assert_allclose(my_grad_input_data, torch_grad_input_data, rtol=1e-5, atol=1e-8)
@@ -310,15 +315,15 @@ class TestLayer(unittest.TestCase):
         grad_output_shape = [2, 10]
 
         # Initialize custom Tensors
-        input_tensor = mytorch.Tensor(input_shape, "CPU")
-        target_tensor = mytorch.Tensor(target_shape, "CPU")
-        grad_output_tensor = mytorch.Tensor(grad_output_shape, "CPU")
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        target_tensor = mytorch.Tensor(target_shape, "GPU")
+        grad_output_tensor = mytorch.Tensor(grad_output_shape, "GPU")
         mytorch.matrix_init(input_tensor)
         mytorch.matrix_init(target_tensor)
 
         # Initialize PyTorch tensors
-        input_torch = torch.rand(input_shape, dtype=torch.float32, requires_grad=True)
-        target_torch = torch.randint(0, 10, target_shape, dtype=torch.long)
+        input_torch = MyTensorToTorchTensor(input_tensor.copy()).requires_grad_(True)
+        target_torch = MyTensorToTorchTensor(target_tensor.copy())
 
         # Custom backward pass
         mytorch.cross_entropy_with_softmax_backward(input_tensor, target_tensor, grad_output_tensor)
