@@ -512,3 +512,51 @@ __global__ void minus_kernel(const float* in_data, int len, const float* target,
         out_data[index] = in_data[index] - target[index];
     }
 }
+
+void relu_forward(const Tensor& X, Tensor& Y){
+    int len = Y.get_size();
+    relu_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(X.data, Y.data);
+    CUDA_POST_KERNEL_CHECK;
+    cudaDeviceSynchronize();
+}
+__global__ void relu_kernel(float* in, float* out){
+    int i = threadIdx.x;
+    out[i] = in[i]>0?in[i]:0;
+    // printf("Hello, CUDA!\n");
+}
+
+void relu_backward(const Tensor& in_gradient, const Tensor& input, Tensor& out_gradient){
+    int len = out_gradient.get_size();
+    relu_backward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(in_gradient.data, input.data, out_gradient.data);
+    CUDA_POST_KERNEL_CHECK;
+    cudaDeviceSynchronize();
+}
+
+__global__ void relu_backward_kernel(float* in_gradient, float* input, float* out_gradient){
+    int i = threadIdx.x;
+    out_gradient[i] = input[i]>0 ? in_gradient[i]:0;
+}
+
+void sigmoid_forward(const Tensor& X, Tensor& Y){
+    int len = Y.get_size();
+    sigmoid_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(X.data, Y.data);
+    CUDA_POST_KERNEL_CHECK;
+    cudaDeviceSynchronize();
+}
+
+__global__ void sigmoid_kernel(float* in, float* out){
+    int i = threadIdx.x;
+    out[i] = 1.0f/(1.0f+expf(-in[i]));
+}
+
+void sigmoid_backward(const Tensor& in_gradient, const Tensor& input, Tensor& out_gradient){
+    int len = out_gradient.get_size();
+    sigmoid_backward_kernel<<<CudaGetBlocks(len), kCudaThreadsNum>>>(in_gradient.data, input.data, out_gradient.data);
+    CUDA_POST_KERNEL_CHECK;
+    cudaDeviceSynchronize();
+}
+__global__ void sigmoid_backward_kernel(float* in_gradient, float* input, float* out_gradient){
+    int i = threadIdx.x;
+    float y = 1.0f/(1.0f+expf(-input[i]));
+    out_gradient[i] = in_gradient[i]*y*(1-y);
+}

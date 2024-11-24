@@ -285,10 +285,10 @@ class TestLayer(unittest.TestCase):
         target_tensor.fill_(0)
         target_tensor.data[1] = 1
         target_tensor.gpu()
-        target_tensor.print()
+        # target_tensor.print()
 
         mytorch.softmax_forward(input_tensor_unnormailized, input_tensor)
-        input_tensor.print()
+        # input_tensor.print()
 
         # Initialize PyTorch tensors
         input_torch = MyTensorToTorchTensor(input_tensor.copy())
@@ -307,36 +307,119 @@ class TestLayer(unittest.TestCase):
         torch_output_data = torch_output.detach().numpy()
 
         np.testing.assert_allclose(my_output_data, torch_output_data, rtol=1e-5, atol=1e-8)
-
-    def test_cross_entropy_with_softmax_backward(self):
+    
+    def test_relu_forward(self):
         # Example shapes
-        input_shape = [2, 10]
-        target_shape = [2]
-        grad_output_shape = [2, 10]
+        input_shape = [2, 3]
+        output_shape = [2, 3]
 
         # Initialize custom Tensors
         input_tensor = mytorch.Tensor(input_shape, "GPU")
-        target_tensor = mytorch.Tensor(target_shape, "GPU")
-        grad_output_tensor = mytorch.Tensor(grad_output_shape, "GPU")
+        output_tensor = mytorch.Tensor(output_shape, "GPU")
         mytorch.matrix_init(input_tensor)
-        mytorch.matrix_init(target_tensor)
+
+        # Initialize PyTorch tensors
+        input_torch = MyTensorToTorchTensor(input_tensor.copy())
+
+        # Custom forward pass
+        mytorch.relu_forward(input_tensor, output_tensor)
+
+        # PyTorch forward pass
+        torch_output = torch.nn.functional.relu(input_torch)
+
+        # Compare data
+        output_tensor.cpu()
+        my_output_data = np.array(output_tensor.data[:output_tensor.get_size()])
+        torch_output_data = torch_output.detach().numpy()
+
+        np.testing.assert_allclose(my_output_data, torch_output_data, rtol=1e-5, atol=1e-8)
+    
+    def test_relu_backward(self):
+        # Example shapes
+        input_shape = [2, 3]
+        grad_output_shape = [2, 3]
+
+        # Initialize custom Tensors
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        grad_output_tensor = mytorch.Tensor(grad_output_shape, "GPU")
+        grad_input_tensor = mytorch.Tensor(input_shape, "GPU")
+        mytorch.matrix_init(input_tensor)
+        mytorch.matrix_init(grad_output_tensor)
 
         # Initialize PyTorch tensors
         input_torch = MyTensorToTorchTensor(input_tensor.copy()).requires_grad_(True)
-        target_torch = MyTensorToTorchTensor(target_tensor.copy())
+        grad_output_torch = MyTensorToTorchTensor(grad_output_tensor.copy())
 
         # Custom backward pass
-        mytorch.cross_entropy_with_softmax_backward(input_tensor, target_tensor, grad_output_tensor)
+        mytorch.relu_backward(grad_output_tensor, input_tensor, grad_input_tensor)
 
         # PyTorch backward pass
-        torch_output = torch.nn.functional.cross_entropy(input_torch, target_torch)
-        torch_output.backward()
+        torch_output = torch.nn.functional.relu(input_torch)
+        torch_output.backward(grad_output_torch)
 
         # Compare data
-        my_grad_output_data = np.array(grad_output_tensor.data)
-        torch_grad_output_data = input_torch.grad.detach().numpy()
+        grad_input_tensor.cpu()
+        my_grad_input_data = np.array(grad_input_tensor.data[:grad_input_tensor.get_size()])
+        torch_grad_input_data = input_torch.grad.detach().numpy()
 
-        np.testing.assert_allclose(my_grad_output_data, torch_grad_output_data, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(my_grad_input_data, torch_grad_input_data, rtol=1e-5, atol=1e-8)
+
+    def test_sigmoid_forward(self):
+        # Example shapes
+        input_shape = [2, 3]
+        output_shape = [2, 3]
+
+        # Initialize custom Tensors
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        output_tensor = mytorch.Tensor(output_shape, "GPU")
+        mytorch.matrix_init(input_tensor)
+
+        # Initialize PyTorch tensors
+        input_torch = MyTensorToTorchTensor(input_tensor.copy())
+
+        # Custom forward pass
+        mytorch.sigmoid_forward(input_tensor, output_tensor)
+
+        # PyTorch forward pass
+        torch_output = torch.nn.functional.sigmoid(input_torch)
+
+        # Compare data
+        output_tensor.cpu()
+        my_output_data = np.array(output_tensor.data[:output_tensor.get_size()])
+        torch_output_data = torch_output.detach().numpy()
+
+        np.testing.assert_allclose(my_output_data, torch_output_data, rtol=1e-5, atol=1e-8)
+    
+    def test_sigmoid_backward(self):
+        # Example shapes
+        input_shape = [2, 3]
+        grad_output_shape = [2, 3]
+
+        # Initialize custom Tensors
+        input_tensor = mytorch.Tensor(input_shape, "GPU")
+        grad_output_tensor = mytorch.Tensor(grad_output_shape, "GPU")
+        grad_input_tensor = mytorch.Tensor(input_shape, "GPU")
+        mytorch.matrix_init(input_tensor)
+        mytorch.matrix_init(grad_output_tensor)
+
+        # Initialize PyTorch tensors
+        input_torch = MyTensorToTorchTensor(input_tensor.copy()).requires_grad_(True)
+        grad_output_torch = MyTensorToTorchTensor(grad_output_tensor.copy())
+
+        # Custom backward pass
+        mytorch.sigmoid_backward(grad_output_tensor, input_tensor, grad_input_tensor)
+
+        # PyTorch backward pass
+        torch_output = torch.nn.functional.sigmoid(input_torch)
+        torch_output.backward(grad_output_torch)
+
+        # Compare data
+        grad_input_tensor.cpu()
+        my_grad_input_data = np.array(grad_input_tensor.data[:grad_input_tensor.get_size()])
+        torch_grad_input_data = input_torch.grad.detach().numpy()
+
+        np.testing.assert_allclose(my_grad_input_data, torch_grad_input_data, rtol=1e-5, atol=1e-8)
+
 
 if __name__ == "__main__":
     unittest.main()

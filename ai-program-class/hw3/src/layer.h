@@ -50,5 +50,17 @@ __global__ void cross_entropy_forward_sum_kernel(int nthreads, int batch_size, c
 void cross_entropy_with_softmax_backward(const Tensor& L, const Tensor& X, const Tensor& label, Tensor& dX);
 __global__ void minus_kernel(const float* in_data, int len, const float* target, float* out_data);
 
+//relu
+void relu_forward(const Tensor& X, Tensor& Y);
+__global__ void relu_kernel(float* in, float* out);
+
+void relu_backward(const Tensor& in_gradient, const Tensor& input, Tensor& out_gradient);
+__global__ void relu_backward_kernel(float* in_gradient, float* input, float* out_gradient);
+
+void sigmoid_forward(const Tensor& X, Tensor& Y);
+__global__ void sigmoid_kernel(float* in, float* out);
+
+void sigmoid_backward(const Tensor& in_gradient, const Tensor& input, Tensor& out_gradient);
+__global__ void sigmoid_backward_kernel(float* in_gradient, float* input, float* out_gradient);
 
 #endif

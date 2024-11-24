@@ -54,4 +54,12 @@ PYBIND11_MODULE(mytorch, m) {
     m.def("cross_entropy_forward", &cross_entropy_forward, "Cross entropy loss forward");
     m.def("cross_entropy_with_softmax_backward", &cross_entropy_with_softmax_backward,
           "Cross entropy loss backward with softmax");
+
+    // ReLU
+    m.def("relu_forward", &relu_forward, "ReLU forward");
+    m.def("relu_backward", &relu_backward, "ReLU backward");
+
+    // Sigmoid
+    m.def("sigmoid_forward", &sigmoid_forward, "Sigmoid forward");
+    m.def("sigmoid_backward", &sigmoid_backward, "Sigmoid backward");
 }
