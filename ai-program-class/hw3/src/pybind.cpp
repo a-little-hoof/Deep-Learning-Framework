@@ -5,6 +5,14 @@
 #include<pybind11/numpy.h>
 namespace py = pybind11;
 
+Tensor* numpy_to_tensor(pybind11::array_t<float> array) {
+    pybind11::buffer_info info = array.request();
+    std::vector<int> shape(info.shape.begin(), info.shape.end());
+    Tensor* tensor = new Tensor(shape, "cpu");
+    tensor->data = (float*)info.ptr;
+    return tensor;
+}
+
 PYBIND11_MODULE(mytorch, m) {
     py::class_<Tensor>(m, "Tensor")
     .def(py::init<const std::vector<int>&, const std::string&>())
@@ -62,4 +70,6 @@ PYBIND11_MODULE(mytorch, m) {
     // Sigmoid
     m.def("sigmoid_forward", &sigmoid_forward, "Sigmoid forward");
     m.def("sigmoid_backward", &sigmoid_backward, "Sigmoid backward");
+
+    m.def("numpy_to_tensor", &numpy_to_tensor, "Convert numpy array to Tensor");
 }
