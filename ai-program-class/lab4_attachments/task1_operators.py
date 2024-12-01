@@ -10,6 +10,19 @@ import numpy as np
 from typing import List, Optional, Tuple, Union
 from device import cpu, Device
 from basic_operator import Op, Value
+from task2_autodiff import compute_gradient_of_variables
+
+def constant(*shape, c=1.0, device=None, dtype="float32", requires_grad=False):
+    """Generate constant Tensor"""
+    device = cpu() if device is None else device
+    array = device.ones(*shape, dtype=dtype) * c  # note: can change dtype
+    return Tensor(array, device=device, dtype=dtype, requires_grad=requires_grad)
+
+def ones(*shape, device=None, dtype="float32", requires_grad=False):
+    """Generate all-ones Tensor"""
+    return constant(
+        *shape, c=1.0, device=device, dtype=dtype, requires_grad=requires_grad
+    )
 
 
 class Tensor(Value):
@@ -102,7 +115,12 @@ class Tensor(Value):
 
 
     def backward(self, out_grad=None):
-        raise NotImplementedError()
+        out_grad = (
+                    out_grad
+                    if out_grad
+                    else ones(*self.shape, dtype=self.dtype, device=self.device)
+                )
+        compute_gradient_of_variables(self, out_grad)
         
 
     def __repr__(self):
@@ -444,6 +462,7 @@ class MatMul(TensorOp):
         ## 请于此填写你的代码
         a, b = node.inputs
         out_grad_np = out_grad.numpy()
+        a, b = a.numpy(), b.numpy()
         out_grad_a, out_grad_b = np.matmul(out_grad_np, b.T), np.matmul(a.T, out_grad_np)
         return Tensor(out_grad_a), Tensor(out_grad_b)
         
