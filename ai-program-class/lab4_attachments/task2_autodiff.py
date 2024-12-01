@@ -51,14 +51,16 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
     
     for node in reverse_topo_order:
+        ## cal grad of current node
         node.grad = sum(node_to_output_grads_list[node])
         if node.is_leaf():
             continue
+        ## cal grad of input nodes may contain multiple inputs
         for i, grad in enumerate(node.op.gradient_as_tuple(node.grad, node)):
-            j =  node.inputs[i]
-            if j not in node_to_output_grads_list:
-                node_to_output_grads_list[j] = []
-            node_to_output_grads_list[j].append(grad)
+            input_node_i =  node.inputs[i]
+            if input_node_i not in node_to_output_grads_list:
+                node_to_output_grads_list[input_node_i] = []
+            node_to_output_grads_list[input_node_i].append(grad)
     
 
 

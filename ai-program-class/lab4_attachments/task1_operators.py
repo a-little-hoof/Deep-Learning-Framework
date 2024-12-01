@@ -512,7 +512,7 @@ class Exp(TensorOp):
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        return out_grad * np.exp(node.inputs[0])
+        return out_grad * Tensor(np.exp((node.inputs[0]).numpy()))
         
 
 
@@ -528,7 +528,7 @@ class ReLU(TensorOp):
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        return out_grad * (node.outputs[0] > 0)
+        return out_grad * Tensor(((node.inputs[0]).numpy() > 0))
         
 
 

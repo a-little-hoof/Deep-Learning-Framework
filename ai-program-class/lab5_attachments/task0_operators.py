@@ -238,12 +238,12 @@ class PowerScalar(TensorOp):
 
     def compute(self, a: np.ndarray) -> np.ndarray:
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return a**self.scalar
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return out_grad * self.scalar * (node.inputs[0] ** (self.scalar - 1))
         
 
 
@@ -277,12 +277,15 @@ class EWiseDiv(TensorOp):
 
     def compute(self, a, b):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return a / b
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        a, b = node.inputs[0], node.inputs[1]
+        grad_a = out_grad / b
+        grad_b = -out_grad * a / (b ** 2)
+        return grad_a, grad_b
         
 
 
@@ -296,12 +299,12 @@ class DivScalar(TensorOp):
 
     def compute(self, a):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return a / self.scalar
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return out_grad / self.scalar
         
 
 
@@ -315,12 +318,32 @@ class Transpose(TensorOp):
 
     def compute(self, a):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        if self.axes is None:
+            axes = list(range(a.ndim))
+            axes[-1], axes[-2] = axes[-2], axes[-1]
+        else:
+            axes = list(range(a.ndim))
+            axis1 = self.axes[0]
+            axis2 = self.axes[1]
+            axes[axis1], axes[axis2] = axes[axis2], axes[axis1]
+        return np.transpose(a, axes=axes)
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        out_grad_np = out_grad.numpy()
+        if self.axes is None:
+            axes = list(range(out_grad_np.ndim))
+            axes[-1], axes[-2] = axes[-2], axes[-1]
+        else:
+            axes = list(range(out_grad_np.ndim))
+            axis1 = self.axes[0]
+            axis2 = self.axes[1]
+            axes[axis1], axes[axis2] = axes[axis2], axes[axis1]
+        out_grad_np = np.transpose(out_grad_np, axes=axes)
+        return Tensor(out_grad_np)
+        
+
         
 
 
@@ -334,12 +357,14 @@ class Reshape(TensorOp):
 
     def compute(self, a):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return np.reshape(a, self.shape)
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        out_grad_np = out_grad.numpy()
+        out_grad_np = out_grad_np.reshape(node.inputs[0].shape)
+        return Tensor(out_grad_np)
         
 
 
@@ -353,12 +378,24 @@ class BroadcastTo(TensorOp):
 
     def compute(self, a):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return np.broadcast_to(a, self.shape)
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        out_grad_np = out_grad.numpy()
+        input_shape = node.inputs[0].shape
+        broadcast_shape = self.shape
+
+        # Calculate the axes along which the gradient should be summed
+        axes = []
+        for i in range(len(broadcast_shape)):
+            if i >= len(input_shape) or input_shape[i] == 1:
+                axes.append(i)
+
+        # Sum the gradient along the broadcasted dimensions
+        grad = np.sum(out_grad_np, axis=tuple(axes), keepdims=True)
+        return Tensor(grad)
         
 
 
@@ -372,12 +409,24 @@ class Summation(TensorOp):
 
     def compute(self, a):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return np.sum(a, axis=self.axes)
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        out_grad_np = out_grad.numpy()
+        if self.axes is None:
+            axes = tuple(range(len(node.inputs[0].shape)))
+        elif isinstance(self.axes, int):
+            axes = (self.axes,)
+        else:
+            axes = self.axes
+
+        for axis in sorted(axes):
+            out_grad_np = np.expand_dims(out_grad_np, axis)
+
+        return Tensor(np.broadcast_to(out_grad_np, node.inputs[0].shape))
+        
         
 
 
@@ -388,12 +437,16 @@ def summation(a, axes=None):
 class MatMul(TensorOp):
     def compute(self, a, b):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return np.matmul(a, b)
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        a, b = node.inputs
+        out_grad_np = out_grad.numpy()
+        a, b = a.numpy(), b.numpy()
+        out_grad_a, out_grad_b = np.matmul(out_grad_np, b.T), np.matmul(a.T, out_grad_np)
+        return Tensor(out_grad_a), Tensor(out_grad_b)
         
 
 
@@ -404,12 +457,13 @@ def matmul(a, b):
 class Negate(TensorOp):
     def compute(self, a):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return -a
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        out_grad_np = out_grad.numpy()
+        return Tensor(-out_grad_np)
         
 
 
@@ -425,7 +479,8 @@ class Log(TensorOp):
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        out_grad_np = out_grad.numpy()
+        return Tensor(out_grad_np / node.inputs[0])
         
 
 
@@ -436,12 +491,13 @@ def log(a):
 class Exp(TensorOp):
     def compute(self, a):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return np.exp(a)
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        out_grad_np = out_grad.numpy()
+        return Tensor(out_grad_np * np.exp(node.inputs[0]))
         
 
 
@@ -452,12 +508,13 @@ def exp(a):
 class ReLU(TensorOp):
     def compute(self, a):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        return np.maximum(0, a)
         
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        raise NotImplementedError()
+        out_grad_np = out_grad.numpy()
+        return Tensor(out_grad_np * (node.outputs[0] > 0))
         
 
 

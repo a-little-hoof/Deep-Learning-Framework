@@ -7,9 +7,11 @@
 因此你可以引入任何的库来帮你进行数据处理和读取
 理论上我们也不需要依赖lab5的内容，如果你需要的话，你可以将lab5对应代码copy到对应位置
 """
-# from task0_autodiff import *
-# from task0_operators import *
+from task0_autodiff import *
+from task0_operators import *
 import numpy as np
+from torchvision import datasets, transforms
+import torch
 
 def parse_mnist():
     """
@@ -19,7 +21,13 @@ def parse_mnist():
     但需要使得输出包括X_tr, y_tr和X_te, y_te
     """
     ## 请于此填写你的代码
-    raise NotImplementedError()
+    data_path = "/data1/home/yifeiwang/Deep-Learning-Framework/ai-program-class/hw3/data/MNIST"
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
+    train_data = datasets.MNIST(root=data_path, train=True, download=False, transform=transform)
+    test_data = datasets.MNIST(root=data_path, train=False, download=False, transform=transform)
+    
 
 def set_structure(n, hidden_dim, k):
     """
@@ -37,8 +45,13 @@ def set_structure(n, hidden_dim, k):
     return list(W1, W2)
     """
 
-    ## 请于此填写你的代码
-    raise NotImplementedError()
+
+    W1 = np.random.randn(n, hidden_dim).astype(np.float32) / np.sqrt(hidden_dim)
+    W2 = np.random.randn(hidden_dim, k).astype(np.float32) / np.sqrt(k)
+    return list(W1, W2)
+
+    
+    
 
 def forward(X, weights):
     """
@@ -53,8 +66,10 @@ def forward(X, weights):
     W2 = weights[1]
     return np.maximum(X@W1,0)@W2
     """
-    ## 请于此填写你的代码
-    raise NotImplementedError()
+    
+    W1 = weights[0]
+    W2 = weights[1]
+    return np.maximum(X@W1,0)@W2
 
 def softmax_loss(Z, y):
     """ 
@@ -69,8 +84,8 @@ def softmax_loss(Z, y):
     Returns:
         Average softmax loss over the sample.
     """
-    ## 请于此填写你的代码
-    raise NotImplementedError()
+    
+    return np.mean(-np.log(np.exp(Z[range(Z.shape[0]), y]) / np.exp(Z).sum(axis=1)))
 
 def opti_epoch(X, y, weights, lr = 0.1, batch=100, beta1=0.9, beta2=0.999, using_adam=False):
     """
@@ -98,8 +113,14 @@ def SGD_epoch(X, y, weights, lr = 0.1, batch=100):
     Returns:
         None
     """
-    ## 请于此填写你的代码
-    raise NotImplementedError()
+
+    loss = softmax_loss(forward(X, weights), y)
+    loss.backward()
+    for i in range(len(weights)):
+        weights[i] -= lr * weights[i].grad
+
+    
+
 
 def Adam_epoch(X, y, weights, lr = 0.1, batch=100, beta1=0.9, beta2=0.999):
     """ 

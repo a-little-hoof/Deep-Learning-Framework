@@ -14,14 +14,24 @@ def find_topo_sort(node_list: List[Value]) -> List[Value]:
     因此我们得到了一个拓扑排序。
     """
     ## 请于此填写你的代码
-    raise NotImplementedError()
+    visited = set()
+    topo_order = []
+    for node in node_list:
+        topo_sort_dfs(node, visited, topo_order)
+    return topo_order
     
 
 
 def topo_sort_dfs(node, visited, topo_order):
     """Post-order DFS"""
     ## 请于此填写你的代码
-    raise NotImplementedError()
+    if node in visited:
+        return
+    visited.add(node)
+    for n in node.inputs:
+        topo_sort_dfs(n, visited, topo_order)
+    topo_order.append(node)
+    return
     
 
 def compute_gradient_of_variables(output_tensor, out_grad):
@@ -40,7 +50,17 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
 
     ## 请于此填写你的代码
-    raise NotImplementedError()
+    for node in reverse_topo_order:
+        ## cal grad of current node
+        node.grad = sum(node_to_output_grads_list[node])
+        if node.is_leaf():
+            continue
+        ## cal grad of input nodes may contain multiple inputs
+        for i, grad in enumerate(node.op.gradient_as_tuple(node.grad, node)):
+            input_node_i =  node.inputs[i]
+            if input_node_i not in node_to_output_grads_list:
+                node_to_output_grads_list[input_node_i] = []
+            node_to_output_grads_list[input_node_i].append(grad)
     
 
 

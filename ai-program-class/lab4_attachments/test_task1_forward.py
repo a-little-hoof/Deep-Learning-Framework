@@ -348,6 +348,27 @@ def test_transpose_forward():
         ),
     )
 
+def test_relu_forward():
+    np.testing.assert_allclose(
+        relu(Tensor([[1.0, 2.0, -1.0, -2.0]])).numpy(),
+        np.array([[1.0, 2.0, 0.0, 0.0]]),
+    )
+    np.testing.assert_allclose(
+        relu(Tensor([[1.0, 2.0, 3.0, 4.0]])).numpy(),
+        np.array([[1.0, 2.0, 3.0, 4.0]]),
+    )
+    np.testing.assert_allclose(
+        relu(Tensor([[-1.0, -2.0, -3.0, -4.0]])).numpy(),
+        np.array([[0.0, 0.0, 0.0, 0.0]]),
+    )
+    np.testing.assert_allclose(
+        relu(Tensor([[1.0, -2.0, 3.0, -4.0]])).numpy(),
+        np.array([[1.0, 0.0, 3.0, 0.0]]),
+    )
+    np.testing.assert_allclose(
+        relu(Tensor([[1.0, -2.0, 3.0, -4.0], [1.0, -2.0, 3.0, -4.0]])).numpy(),
+        np.array([[1.0, 0.0, 3.0, 0.0], [1.0, 0.0, 3.0, 0.0]]),
+    )
 
 
 if __name__ == "__main__":
@@ -362,6 +383,7 @@ if __name__ == "__main__":
     test_reshape_forward()
     test_negate_forward()
     test_transpose_forward()
+    test_relu_forward()
     # log 和 exp 的测试没写...
     # 交作业的时候也是会测试的...
     

@@ -30,6 +30,7 @@ def gradient_check(f, *args, tol=1e-6, backward=False, **kwargs):
     error = sum(
         np.linalg.norm(computed_grads[i] - numerical_grads[i]) for i in range(len(args))
     )
+    # print("Error: ", error)
     assert error < tol
     return computed_grads
 
@@ -114,7 +115,15 @@ def test_summation_backward():
     gradient_check(summation, Tensor(np.random.randn(5, 4)), axes=(0, 1))
     gradient_check(summation, Tensor(np.random.randn(5, 4, 1)), axes=(0, 1))
 
+def test_log_backward():
+    # tensor > 0
+    gradient_check(log, Tensor(np.random.rand(5, 4)))
 
+def test_exp_backward():
+    gradient_check(exp, Tensor(np.random.randn(5, 4)))
+
+def test_relu_backward():
+    gradient_check(relu, Tensor(np.random.randn(5, 4)))
 
 if __name__ == "__main__":
     ## 可以分别测试每个函数
@@ -128,6 +137,9 @@ if __name__ == "__main__":
     test_reshape_backward()
     test_negate_backward()
     test_transpose_backward()
+    test_log_backward()
+    test_exp_backward()
+    test_relu_backward()
     ## log 和 exp 的测试没写...
     ## 交作业的时候也是会测试的...
     
