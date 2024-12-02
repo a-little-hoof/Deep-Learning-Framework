@@ -284,7 +284,9 @@ if __name__ == "__main__":
     X_tr, y_tr, X_te, y_te = parse_mnist() 
     weights = set_structure(X_tr.shape[1], 100, y_tr.max() + 1)
     ## using SGD optimizer 
+    print("Using SGD optimizer")
     train_nn(X_tr, y_tr, X_te, y_te, weights, hidden_dim=100, epochs=20, lr = 0.001, batch=100, beta1=0.9, beta2=0.999, using_adam=False)
     ## using Adam optimizer
-    # train_nn(X_tr, y_tr, X_te, y_te, weights, hidden_dim=100, epochs=20, lr = 0.001, batch=100, beta1=0.9, beta2=0.999, using_adam=True)
+    print("Using Adam optimizer")
+    train_nn(X_tr, y_tr, X_te, y_te, weights, hidden_dim=100, epochs=20, lr = 0.001, batch=100, beta1=0.9, beta2=0.999, using_adam=True)
     
