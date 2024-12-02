@@ -7,7 +7,19 @@ import numpy as np
 from typing import List, Optional, Tuple, Union
 from device import cpu, Device
 from basic_operator import Op, Value
+from task0_autodiff import compute_gradient_of_variables
 
+def constant(*shape, c=1.0, device=None, dtype="float32", requires_grad=False):
+    """Generate constant Tensor"""
+    device = cpu() if device is None else device
+    array = device.ones(*shape, dtype=dtype) * c  # note: can change dtype
+    return Tensor(array, device=device, dtype=dtype, requires_grad=requires_grad)
+
+def ones(*shape, device=None, dtype="float32", requires_grad=False):
+    """Generate all-ones Tensor"""
+    return constant(
+        *shape, c=1.0, device=device, dtype=dtype, requires_grad=requires_grad
+    )
 
 class Tensor(Value):
     grad: "Tensor"
@@ -99,7 +111,12 @@ class Tensor(Value):
 
 
     def backward(self, out_grad=None):
-        raise NotImplementedError()
+        out_grad = (
+                    out_grad
+                    if out_grad
+                    else ones(*self.shape, dtype=self.dtype, device=self.device)
+                )
+        compute_gradient_of_variables(self, out_grad)
         
 
     def __repr__(self):
@@ -479,8 +496,7 @@ class Log(TensorOp):
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        out_grad_np = out_grad.numpy()
-        return Tensor(out_grad_np / node.inputs[0])
+        return out_grad / node.inputs[0]
         
 
 
@@ -496,8 +512,7 @@ class Exp(TensorOp):
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        out_grad_np = out_grad.numpy()
-        return Tensor(out_grad_np * np.exp(node.inputs[0]))
+        return out_grad * Tensor(np.exp((node.inputs[0]).numpy()))
         
 
 
@@ -513,8 +528,7 @@ class ReLU(TensorOp):
 
     def gradient(self, out_grad, node):
         ## 请于此填写你的代码
-        out_grad_np = out_grad.numpy()
-        return Tensor(out_grad_np * (node.outputs[0] > 0))
+        return out_grad * Tensor(((node.inputs[0]).numpy() > 0))
         
 
 
